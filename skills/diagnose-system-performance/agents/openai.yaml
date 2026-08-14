@@ -1,0 +1,4 @@
+interface:
+  display_name: "Diagnóstico de Performance"
+  short_description: "Investigue gargalos com evidências"
+  default_prompt: "Use $diagnose-system-performance para investigar este problema de performance a partir das métricas e evidências disponíveis."
