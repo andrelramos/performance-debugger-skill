@@ -1,286 +1,286 @@
-# Árvore de decisão para problemas de performance
+# Decision tree for performance problems
 
-Use esta árvore como mapa, não como checklist rígido. Comece no sinal mais diretamente ligado ao impacto e atravesse para outros ramos quando houver evidência de interação.
+Use this tree as a map, not as a rigid checklist. Start with the signal most directly tied to the impact, and move across branches when there is evidence of interaction.
 
-## Roteamento inicial
+## Initial routing
 
-| Sinal dominante | Ramo inicial | Primeira distinção |
+| Dominant signal | Initial branch | First distinction |
 |---|---|---|
-| Respostas ou jobs lentos | Latência | p50 também piorou ou apenas p95/p99? |
-| Processamento no limite | CPU | todos os cores ou apenas um? |
-| RAM crescente ou pausas | Memória e Garbage Collector | retenção, alocação ou pressão externa? |
-| Tempo concentrado em queries | Banco de dados | query lenta, volume, lock ou saturação? |
-| Espera para adquirir recurso | Conexões e pools | falta de capacidade ou retenção anormal? |
-| Falhas sob carga | Erros e timeouts | origem, orçamento e amplificação por retry? |
-| I/O wait ou storage lento | Disco e I/O | IOPS, throughput, latência ou fila? |
-| Chamadas remotas degradadas | Rede | RTT, perda, DNS, handshake ou round-trips? |
-| Backlog ou vazão insuficiente | Filas e throughput | chegada supera serviço ou consumers degradaram? |
+| Slow responses or jobs | Latency | Did p50 also worsen, or only p95/p99? |
+| Processing at the limit | CPU | All cores or only one? |
+| Growing RAM usage or pauses | Memory and garbage collection | Retention, allocation, or external pressure? |
+| Time concentrated in queries | Database | Slow query, volume, lock, or saturation? |
+| Waiting to acquire a resource | Connections and pools | Insufficient capacity or abnormal retention? |
+| Failures under load | Errors and timeouts | Origin, budget, and retry amplification? |
+| I/O wait or slow storage | Disk and I/O | IOPS, throughput, latency, or queue? |
+| Degraded remote calls | Network | RTT, loss, DNS, handshake, or round trips? |
+| Backlog or insufficient throughput | Queues and throughput | Does arrival exceed service, or have consumers degraded? |
 
-## 1. Latência
+## 1. Latency
 
-### 1.1 Delimitar
+### 1.1 Establish scope
 
-- Compare p50, p95, p99, máximo e taxa de timeout; média isolada esconde caudas.
-- Segmente por operação, status, payload, tenant, instância, zona, versão e dependência.
-- Decomponha tempo em fila, aplicação, banco, chamadas externas, serialização e rede.
+- Compare p50, p95, p99, maximum, and timeout rate; the average alone hides tail latency.
+- Segment by operation, status, payload, tenant, instance, zone, version, and dependency.
+- Break time down into queueing, application, database, external calls, serialization, and network.
 
-### 1.2 Se p50, p95 e p99 pioraram juntos
+### 1.2 If p50, p95, and p99 worsened together
 
-Suspeite de degradação sistêmica ou caminho comum:
+Suspect systemic degradation or a common path:
 
-- CPU ou memória pressionadas em muitas instâncias;
-- banco/dependência mais lento para a maioria das operações;
-- aumento geral de payload, volume ou custo algorítmico;
-- mudança de configuração, runtime, infraestrutura ou deploy;
-- filas permanentes por capacidade insuficiente.
+- CPU or memory pressure across many instances;
+- a slower database/dependency for most operations;
+- a general increase in payload, volume, or algorithmic cost;
+- a configuration, runtime, infrastructure, or deployment change;
+- persistent queues caused by insufficient capacity.
 
-Medições decisivas: breakdown de tracing, tempo de serviço versus espera, perfil por versão e comparação com baseline de mesmo volume.
+Decisive measurements: tracing breakdown, service time versus wait time, profile by version, and comparison with a baseline at the same volume.
 
-### 1.3 Se p50 estável, mas p95/p99 pioraram
+### 1.3 If p50 is stable, but p95/p99 worsened
 
-Suspeite de comportamento esparso:
+Suspect sparse behavior:
 
-- contenção de locks ou pool;
-- pausas do Garbage Collector;
-- retries e hedging;
-- partição, shard, host ou zona degradada;
-- cache miss, cold start ou lazy initialization;
-- payloads grandes e operações específicas;
-- noisy neighbor ou throttling.
+- lock or pool contention;
+- garbage collection pauses;
+- retries and hedging;
+- a degraded partition, shard, host, or zone;
+- cache miss, cold start, or lazy initialization;
+- large payloads and specific operations;
+- noisy neighbor or throttling.
 
-Medições decisivas: traces dos outliers, distribuição por instância/partição, aquisição de pools, pausas e número de tentativas.
+Decisive measurements: outlier traces, distribution by instance/partition, pool acquisition, pauses, and number of attempts.
 
-### 1.4 Se a latência cresce com a demanda
+### 1.4 If latency grows with demand
 
-- Verifique se a taxa de chegada se aproxima da taxa de serviço.
-- Procure filas invisíveis: executor, thread pool, event loop, socket backlog, pool de conexão e banco.
-- Compare concorrência útil com tempo bloqueado.
-- Teste se o custo por operação também cresce; isso indica contenção, cache pior ou complexidade dependente do volume.
+- Check whether the arrival rate is approaching the service rate.
+- Look for invisible queues: executor, thread pool, event loop, socket backlog, connection pool, and database.
+- Compare useful concurrency with blocked time.
+- Test whether the cost per operation also grows; this indicates contention, lower cache effectiveness, or volume-dependent complexity.
 
 ## 2. CPU
 
-### 2.1 Todos os cores altos
+### 2.1 All cores are highly utilized
 
-Possíveis mecanismos:
+Possible mechanisms:
 
-- carga legítima acima da capacidade;
-- algoritmo, parsing, compressão, criptografia ou serialização caros;
-- retries, polling ou loops repetindo trabalho;
-- Garbage Collector consumindo CPU por taxa alta de alocação;
-- excesso de context switches ou threads executáveis;
-- consultas/processamento movidos indevidamente para a aplicação.
+- legitimate load above capacity;
+- expensive algorithms, parsing, compression, cryptography, or serialization;
+- retries, polling, or loops repeating work;
+- garbage collection consuming CPU because of a high allocation rate;
+- excessive context switches or runnable threads;
+- queries/processing improperly moved into the application.
 
-Colete perfil de CPU por amostragem, taxa de requests, custo por operação, alocações, retries e run queue.
+Collect a sampling CPU profile, request rate, cost per operation, allocations, retries, and run queue.
 
-### 2.2 Um core alto com CPU agregada moderada
+### 2.2 One highly utilized core with moderate aggregate CPU
 
-Suspeite de:
+Suspect:
 
-- event loop ou dispatcher saturado;
-- lock global ou seção serial;
-- partição única/hot key;
-- afinidade incorreta;
-- etapa single-threaded limitando pipeline paralelo.
+- a saturated event loop or dispatcher;
+- a global lock or serial section;
+- a single partition/hot key;
+- incorrect affinity;
+- a single-threaded stage limiting a parallel pipeline.
 
-Analise CPU por core/thread e throughput da etapa serial. CPU média da máquina pode mascarar esse gargalo.
+Analyze CPU by core/thread and the throughput of the serial stage. Average machine CPU can hide this bottleneck.
 
-### 2.3 CPU cresce mais rápido que o volume
+### 2.3 CPU grows faster than volume
 
-Investigue complexidade não linear, tamanho médio dos dados, cache hit ratio, contenção, retries e trabalho duplicado. Normalize CPU por transação e por byte processado.
+Investigate nonlinear complexity, average data size, cache hit ratio, contention, retries, and duplicated work. Normalize CPU by transaction and by byte processed.
 
-### 2.4 CPU alta sem throughput correspondente
+### 2.4 High CPU without corresponding throughput
 
-Procure spin lock, busy wait, polling agressivo, retry storm, compressão inútil, logging excessivo, invalidação de cache ou Garbage Collector. Diferencie tempo de usuário, sistema, steal e iowait.
+Look for spin locks, busy waiting, aggressive polling, a retry storm, unnecessary compression, excessive logging, cache invalidation, or garbage collection. Distinguish user, system, steal, and iowait time.
 
-## 3. Memória e Garbage Collector
+## 3. Memory and garbage collection
 
-### 3.1 Memória cresce continuamente e não retorna
+### 3.1 Memory grows continuously and does not return
 
-Distinga:
+Distinguish:
 
-- retenção real de objetos/referências;
-- cache sem limite ou cardinalidade inesperada;
-- filas/backlogs guardados em memória;
-- buffers, listeners, tasks ou conexões não liberados;
-- memória nativa/off-heap versus heap gerenciado;
-- fragmentação ou comportamento esperado do allocator.
+- actual retention of objects/references;
+- an unbounded cache or unexpected cardinality;
+- queues/backlogs held in memory;
+- buffers, listeners, tasks, or connections that are not released;
+- native/off-heap memory versus managed heap;
+- fragmentation or expected allocator behavior.
 
-Compare heap usado após coleta completa, RSS/working set, memória nativa, número de objetos por classe e dominadores entre snapshots.
+Compare heap usage after a full collection, RSS/working set, native memory, object counts by class, and dominators across snapshots.
 
-### 3.2 Picos associados a uma operação
+### 3.2 Spikes associated with an operation
 
-Verifique materialização de coleções, leitura integral de arquivos, descompressão, serialização duplicada, joins em memória e concorrência da operação. Meça bytes alocados e pico por operação, não só RAM global.
+Check for collection materialization, full-file reads, decompression, duplicate serialization, in-memory joins, and operation concurrency. Measure allocated bytes and peak usage per operation, not only global RAM.
 
-### 3.3 Garbage Collector frequente ou pausas longas
+### 3.3 Frequent garbage collection or long pauses
 
-Pergunte:
+Ask:
 
-- a taxa de alocação aumentou?
-- o live set cresceu?
-- heap está pequeno para o workload ou grande demais para a meta de pausa?
-- há objetos grandes, promoção precoce ou fragmentação?
-- CPU de GC substituiu trabalho útil?
+- Did the allocation rate increase?
+- Did the live set grow?
+- Is the heap too small for the workload or too large for the pause target?
+- Are there large objects, premature promotion, or fragmentation?
+- Has garbage collection CPU displaced useful work?
 
-Correlacione pausas e tempo de CPU do GC com p95/p99. Ajuste de heap/coletor é hipótese posterior; primeiro descubra por que alocação ou retenção mudou.
+Correlate pauses and garbage collection CPU time with p95/p99. Heap/collector tuning is a later hypothesis; first determine why allocation or retention changed.
 
-### 3.4 Swap, page faults ou pressão do host
+### 3.4 Swap, page faults, or host pressure
 
-Se heap parece saudável mas latência piora, verifique working set total, containers vizinhos, page faults major, swap, limites de cgroup e OOM kills. O problema pode estar fora do runtime.
+If the heap appears healthy but latency worsens, check the total working set, neighboring containers, major page faults, swap, cgroup limits, and OOM kills. The problem may be outside the runtime.
 
-## 4. Banco de dados
+## 4. Database
 
-### 4.1 Queries individuais lentas
+### 4.1 Slow individual queries
 
-Inspecione plano real, linhas estimadas versus reais, índices, seletividade, join order, sorts, spills, scans e parâmetros. Compare tempo no servidor, aquisição de conexão e transferência de resultados.
+Inspect the actual plan, estimated versus actual rows, indexes, selectivity, join order, sorts, spills, scans, and parameters. Compare server time, connection acquisition, and result transfer.
 
-Possíveis causas:
+Possible causes:
 
-- índice ausente/inadequado ou não utilizado;
-- mudança de plano ou parameter sensitivity;
-- estatísticas desatualizadas;
-- volume/cardinalidade maior;
-- sort/hash spill por memória insuficiente;
-- funções/conversões impedindo acesso eficiente;
-- lock wait confundido com execução lenta.
+- a missing/inadequate or unused index;
+- a plan change or parameter sensitivity;
+- stale statistics;
+- greater volume/cardinality;
+- a sort/hash spill caused by insufficient memory;
+- functions/conversions preventing efficient access;
+- lock wait mistaken for slow execution.
 
-#### 4.1.1 Mesmo query shape lento apenas em algumas execuções
+#### 4.1.1 Same query shape is slow only in some executions
 
-Se o mesmo query shape é lento de forma intermitente, compare execuções rápidas e lentas com parâmetros, cardinalidade, cache e concorrência equivalentes. Separe o tempo de planejamento ou otimização do tempo de execução e verifique se houve escolha ou replanejamento de planos diferentes.
+If the same query shape is intermittently slow, compare fast and slow executions with equivalent parameters, cardinality, cache, and concurrency. Separate planning or optimization time from execution time, and check whether different plans were selected or replanned.
 
-Se o planner, otimizador ou componente equivalente estiver lento:
+If the planner/optimizer or equivalent component is slow:
 
-- avalie quantos índices candidatos ele considera e se há índices redundantes, sobrepostos, irrelevantes para o query shape ou pouco seletivos; reduza ou redesenhe índices somente depois de confirmar uso, redundância e impacto;
-- verifique estatísticas, distribuição dos dados e diferenças entre estimativas e cardinalidade real;
-- procure colunas pesadas, como vetores, arquivos, binários, BLOBs ou documentos grandes, e confirme se entram em algum índice, na leitura de linhas/documentos candidatos ou no resultado por falta de projeção; mantenha essas colunas fora do caminho crítico quando não forem necessárias.
+- assess how many candidate indexes it considers and whether any indexes are redundant, overlapping, irrelevant to the query shape, or insufficiently selective; reduce or redesign indexes only after confirming usage, redundancy, and impact;
+- check statistics, data distribution, and differences between estimates and actual cardinality;
+- look for heavy columns, such as vectors, files, binary data, BLOBs, or large documents, and confirm whether they are included in any index, read from candidate rows/documents, or included in the result because projection is missing; keep these columns out of the critical path when they are not needed.
 
-Alguns bancos permitem limitar a escolha do planner com um index hint ou mecanismo equivalente; MongoDB é um exemplo. Considere isso apenas como mitigação temporária, paliativa, reversível e monitorada para os query shapes afetados: reduzir os planos candidatos pode evitar planejamento lento, mas forçar um índice remove parte da capacidade do banco de se adaptar a mudanças de dados e workload. Prefira corrigir índices, estatísticas, projeção e modelagem que causam a instabilidade.
+Some databases allow the planner's choice to be constrained with an index hint or equivalent mechanism; MongoDB is one example. Consider this only as a temporary, palliative, reversible, monitored mitigation for the affected query shapes: reducing candidate plans may prevent slow planning, but forcing an index removes some of the database's ability to adapt to changes in data and workload. Prefer fixing the indexes, statistics, projection, and modeling that cause the instability.
 
-### 4.2 Muitas queries por operação
+### 4.2 Many queries per operation
 
-Procure N+1, lazy loading, chamadas duplicadas, chatty APIs, paginação implementada em memória e falta de batching. Meça queries por transação e round-trips, não apenas duração média de cada query.
+Look for N+1 queries, lazy loading, duplicate calls, chatty APIs, in-memory pagination, and missing batching. Measure queries per transaction and round trips, not only the average duration of each query.
 
-### 4.3 Muitas linhas ou bytes lidos
+### 4.3 Many rows or bytes read
 
-Separe quantidade de linhas de quantidade de bytes. Uma linha pode ser pesada devido a BLOBs, arquivos, imagens, documentos, JSON grande, arrays, biometria, vetores ou embeddings.
+Separate the number of rows from the number of bytes. A row can be heavy because of BLOBs, files, images, documents, large JSON values, arrays, biometric data, vectors, or embeddings.
 
-Cadeia típica:
+Typical causal chain:
 
-`colunas pesadas → mais leitura e transferência → mais desserialização e alocação → CPU/GC/rede maiores → latência e throughput piores`
+`heavy columns → more reads and transfer → more deserialization and allocation → higher CPU/garbage collection/network usage → worse latency and throughput`
 
-Verifique projeção de colunas, filtros, paginação, acesso tardio ao conteúdo pesado, compressão e modelo de armazenamento. Evite `SELECT *` em caminhos críticos sem necessidade comprovada.
+Check column projection, filters, pagination, deferred access to heavy content, compression, and the storage model. Avoid `SELECT *` on critical paths without a demonstrated need.
 
-### 4.4 Locks e transações
+### 4.4 Locks and transactions
 
-Meça lock wait, blockers, deadlocks, duração e escopo das transações. Procure transações abertas durante chamadas externas, operações em lote grandes, ordem inconsistente de locks e isolamento mais forte que o necessário.
+Measure lock wait, blockers, deadlocks, and transaction duration and scope. Look for transactions left open during external calls, large batch operations, inconsistent lock ordering, and stronger isolation than necessary.
 
-### 4.5 Banco saturado
+### 4.5 Saturated database
 
-Relacione CPU, I/O, buffer/cache hit, memória, sessões ativas, fila, replica lag e limites. Confirme se a saturação vem do workload investigado ou de vizinhos. Escalar capacidade pode aliviar, mas não comprova causa-raiz.
+Correlate CPU, I/O, buffer/cache hit, memory, active sessions, queue, replica lag, and limits. Confirm whether the saturation comes from the workload under investigation or from neighbors. Scaling capacity may provide relief, but does not prove root cause.
 
-## 5. Conexões e pools
+## 5. Connections and pools
 
-### 5.1 Tempo alto para adquirir conexão/recurso
+### 5.1 Long time to acquire a connection/resource
 
-Meça utilização, fila de espera, tempo de aquisição, timeouts, churn e duração de uso.
+Measure utilization, wait queue, acquisition time, timeouts, churn, and usage duration.
 
-Hipóteses:
+Hypotheses:
 
-- pool pequeno para concorrência e tempo de retenção atuais;
-- conexões não devolvidas ou streams não fechados;
-- transações/queries lentas retendo o recurso;
-- pool grande demais saturando o destino;
-- criação de conexão cara por ausência de reuso;
-- limites desalinhados entre aplicação, proxy e banco.
+- the pool is too small for current concurrency and retention time;
+- connections are not returned or streams are not closed;
+- slow transactions/queries retain the resource;
+- the pool is so large that it saturates the destination;
+- connection creation is expensive because connections are not reused;
+- limits are misaligned across the application, proxy, and database.
 
-Não aumente o pool automaticamente. Pela relação aproximada `concorrência em uso ≈ taxa × tempo de retenção`, reduzir retenção pode ser mais seguro que ampliar conexões.
+Do not automatically increase the pool. Given the approximate relationship `concurrency in use ≈ rate × retention time`, reducing retention may be safer than adding connections.
 
-### 5.2 Muitas threads ou tarefas esperando
+### 5.2 Many threads or tasks waiting
 
-Identifique o recurso comum: conexão, lock, semaphore, socket, executor ou quota. Um thread pool maior pode apenas mover a fila e aumentar memória/context switches.
+Identify the shared resource: connection, lock, semaphore, socket, executor, or quota. A larger thread pool may only move the queue and increase memory/context switches.
 
-## 6. Erros e timeouts
+## 6. Errors and timeouts
 
-### 6.1 Delimitar a origem
+### 6.1 Establish the origin
 
-- Quem emitiu o timeout: cliente, proxy, aplicação, banco ou dependência?
-- O orçamento diminui a cada hop ou cada camada reinicia um timeout completo?
-- A operação continuou depois que o cliente desistiu?
-- Há cancelamento propagado?
+- Who issued the timeout: client, proxy, application, database, or dependency?
+- Does the budget decrease at each hop, or does each layer restart a full timeout?
+- Did the operation continue after the client gave up?
+- Is cancellation propagated?
 
-### 6.2 Verificar amplificação
+### 6.2 Check for amplification
 
-Retries podem transformar uma degradação pequena em saturação. Meça tentativas por operação, backoff, jitter, requests duplicados, taxa de sucesso por tentativa e carga desperdiçada.
+Retries can turn a small degradation into saturation. Measure attempts per operation, backoff, jitter, duplicate requests, success rate by attempt, and wasted load.
 
-### 6.3 Padrões úteis
+### 6.3 Useful patterns
 
-- erros apenas sob carga: capacidade, pool, quota ou fila;
-- erros periódicos: renovação, rotação, coleta, batch ou autoscaling;
-- timeouts com CPU baixa: bloqueio, dependência, pool, rede ou I/O;
-- 5xx após aumento de latência: consequência provável, não necessariamente causa inicial.
+- errors only under load: capacity, pool, quota, or queue;
+- periodic errors: renewal, rotation, collection, batch, or autoscaling;
+- timeouts with low CPU: blocking, dependency, pool, network, or I/O;
+- 5xx errors after latency increases: likely a consequence, not necessarily the initial cause.
 
-## 7. Disco e I/O
+## 7. Disk and I/O
 
-### 7.1 Distinguir o limite
+### 7.1 Distinguish the constraint
 
-Observe latência, IOPS, throughput, tamanho das operações, profundidade de fila e iowait. Alto throughput não implica bom desempenho para I/O pequeno e aleatório; muitas IOPS também não explicam operações grandes sequenciais.
+Observe latency, IOPS, throughput, operation size, queue depth, and iowait. High throughput does not imply good performance for small random I/O; high IOPS also do not explain large sequential operations.
 
-### 7.2 Hipóteses comuns
+### 7.2 Common hypotheses
 
-- logs síncronos ou verbose demais;
-- fsync frequente;
-- cache miss e leitura aleatória;
-- spill de banco/sort para disco;
-- compaction, backup ou snapshot concorrente;
-- volume compartilhado/noisy neighbor;
-- inode, espaço ou quota perto do limite;
-- leitura/escrita de arquivos grandes no caminho síncrono.
+- synchronous or excessively verbose logs;
+- frequent fsync;
+- cache misses and random reads;
+- database/sort spill to disk;
+- concurrent compaction, backup, or snapshot activity;
+- shared volume/noisy neighbor;
+- inode, space, or quota near the limit;
+- reading/writing large files on the synchronous path.
 
-Correlacione tempo de I/O da operação com fila do dispositivo e atividade de outros processos.
+Correlate the operation's I/O time with the device queue and activity from other processes.
 
-## 8. Rede
+## 8. Network
 
-### 8.1 Separar componentes
+### 8.1 Separate components
 
-Meça DNS, conexão TCP, TLS, time to first byte, transferência, RTT, perda, retransmissões e resets. Tracing de aplicação sem esses componentes pode atribuir rede ao serviço remoto.
+Measure DNS, TCP connection, TLS, time to first byte, transfer, RTT, loss, retransmissions, and resets. Application tracing without these components may attribute network time to the remote service.
 
-### 8.2 Hipóteses comuns
+### 8.2 Common hypotheses
 
-- muitos round-trips pequenos;
-- ausência de keep-alive ou reuso;
-- handshake/DNS repetido;
-- perda e retransmissões;
-- caminho entre zonas/regiões;
-- payload grande ou compressão inadequada;
-- proxy, service mesh, NAT ou load balancer saturado;
-- balanceamento desigual ou endpoint degradado.
+- many small round trips;
+- no keep-alive or reuse;
+- repeated handshake/DNS;
+- loss and retransmissions;
+- a path across zones/regions;
+- a large payload or inadequate compression;
+- a saturated proxy, service mesh, NAT, or load balancer;
+- uneven load balancing or a degraded endpoint.
 
-Compare por origem, destino, zona, protocolo e versão. Evite concluir “rede” apenas porque a chamada externa aparece lenta.
+Compare by origin, destination, zone, protocol, and version. Avoid concluding "network" merely because an external call appears slow.
 
-## 9. Filas e throughput
+## 9. Queues and throughput
 
-### 9.1 Backlog crescente
+### 9.1 Growing backlog
 
-Compare taxa de chegada, taxa de conclusão, concorrência efetiva, tempo de serviço e idade da mensagem mais antiga.
+Compare arrival rate, completion rate, effective concurrency, service time, and age of the oldest message.
 
-- chegada > serviço: capacidade sustentada insuficiente;
-- serviço caiu: consumer, dependência, lock, erro ou mudança de custo;
-- backlog concentrado: partição/hot key ou ordenação;
-- muitas reentregas: falha, timeout, visibility window ou idempotência;
-- lag alto com consumers ociosos: atribuição, polling, lease ou configuração.
+- arrival > service: insufficient sustained capacity;
+- service rate fell: consumer, dependency, lock, error, or cost change;
+- concentrated backlog: partition/hot key or ordering;
+- many redeliveries: failure, timeout, visibility window, or idempotency;
+- high lag with idle consumers: assignment, polling, lease, or configuration.
 
-### 9.2 Throughput baixo sem recurso saturado
+### 9.2 Low throughput without a saturated resource
 
-Procure limite de concorrência, etapa serial, batch pequeno, espera externa, backpressure, rate limit, partições insuficientes ou coordenação excessiva.
+Look for a concurrency limit, serial stage, small batch, external wait, backpressure, rate limit, insufficient partitions, or excessive coordination.
 
-### 9.3 Throughput alto com latência pior
+### 9.3 High throughput with worse latency
 
-Pode haver batching maior, fila deliberada ou troca entre vazão e tempo de resposta. Verifique se o comportamento respeita o SLO antes de tratá-lo como regressão.
+There may be larger batches, deliberate queueing, or a trade-off between throughput and response time. Check whether the behavior meets the SLO before treating it as a regression.
 
-## Interações que atravessam ramos
+## Cross-branch interactions
 
-- Retry storm: timeout → retries → CPU/conexões/banco → mais timeout.
-- Pool esgotado: query lenta → retenção de conexão → fila → p99 alto.
-- Objetos/colunas pesadas: banco/rede → alocação → Garbage Collector → cauda de latência.
-- Backlog: serviço lento → memória maior → GC/CPU → serviço ainda mais lento.
-- Logging excessivo: erro/retry → disco e CPU → latência.
-- Hot partition: distribuição desigual → core/shard/fila específicos saturados com médias globais normais.
+- Retry storm: timeout → retries → CPU/connections/database → more timeouts.
+- Exhausted pool: slow query → connection retention → queue → high p99.
+- Heavy objects/columns: database/network → allocation → garbage collection → tail latency.
+- Backlog: slow service → higher memory usage → garbage collection/CPU → even slower service.
+- Excessive logging: error/retry → disk and CPU → latency.
+- Hot partition: uneven distribution → specific core/shard/queue saturated while global averages remain normal.

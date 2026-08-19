@@ -1,25 +1,25 @@
-# Orientação para queries intermitentemente lentas
+# Guidance for intermittently slow queries
 
-## Objetivo
+## Objective
 
-Adicionar à árvore de diagnóstico uma orientação específica para o caso em que o mesmo shape de query apresenta lentidão apenas em algumas execuções. A orientação deve ajudar a distinguir tempo de planejamento de tempo de execução e transformar essa variação em hipóteses verificáveis.
+Add specific guidance to the diagnostic tree for cases where the same query shape is slow only during some executions. The guidance must help distinguish planning/optimization time from execution time and turn this variation into verifiable hypotheses.
 
-## Localização
+## Location
 
-Criar uma subseção dentro de `4.1 Queries individuais lentas`, em `skills/diagnose-system-performance/references/decision-tree.md`. A proximidade mantém o novo caso no ramo em que o agente já inspeciona planos, índices, seletividade e mudanças de plano.
+Create a subsection within `4.1 Slow individual queries` in `skills/diagnose-system-performance/references/decision-tree.md`. This proximity keeps the new case in the branch where the agent already inspects plans, indexes, selectivity, and plan changes.
 
-## Conteúdo
+## Content
 
-A subseção deve orientar o agente a:
+The subsection must instruct the agent to:
 
-1. comparar execuções rápidas e lentas do mesmo query shape, preservando parâmetros, cardinalidade, cache e concorrência como dimensões da análise;
-2. medir separadamente o custo do planner ou componente equivalente e o custo da execução;
-3. se o planejamento for lento, avaliar excesso de índices candidatos, índices redundantes ou pouco relevantes e estatísticas que dificultem a escolha;
-4. verificar se colunas pesadas, como vetores, arquivos, binários, BLOBs ou documentos grandes, entram no índice, na leitura de linhas/documentos candidatos ou no resultado por falta de projeção;
-5. considerar redução ou redesenho de índices somente após confirmar uso, redundância e impacto, evitando recomendar remoção sem evidência;
-6. registrar que alguns bancos, como MongoDB, permitem usar um index hint para limitar a escolha do planner;
-7. tratar o index hint como mitigação paliativa, reversível e monitorada, pois força um plano que pode deixar de ser adequado quando dados e workload mudarem.
+1. compare fast and slow executions of the same query shape, preserving parameters, cardinality, cache, and concurrency as analysis dimensions;
+2. measure planning/optimization time separately from execution time, including the planner or equivalent component;
+3. if planning/optimization is slow, evaluate an excessive number of candidate indexes, redundant or marginally relevant indexes, and statistics that make selection difficult;
+4. verify whether heavy columns, such as vectors, files, binary data, BLOBs, or large documents, are included in an index, read with candidate rows/documents, or returned because projection is missing;
+5. consider reducing or redesigning indexes only after confirming usage, redundancy, and impact, avoiding recommendations to remove them without evidence;
+6. note that some databases, such as MongoDB, allow an index hint to limit the planner's choices;
+7. treat an index hint only as a temporary, palliative, reversible, monitored mitigation because it forces a plan that may become unsuitable as data and workloads change.
 
-## Segurança e validação
+## Safety and validation
 
-A mudança é apenas documental. Ela deve preservar o método orientado por evidências da skill, separar diagnóstico de correção e evitar a conclusão automática de que muitos índices ou uma coluna pesada são a causa. A validação deve confirmar que um agente consegue recuperar todos os pontos acima e não recomenda index hint como solução padrão.
+The change is documentation-only. It must preserve the skill's evidence-driven method, separate diagnosis from correction, and avoid automatically concluding that too many indexes or a heavy column are the root cause. Validation must confirm that an agent can retrieve all the points above and does not recommend an index hint as the default solution.

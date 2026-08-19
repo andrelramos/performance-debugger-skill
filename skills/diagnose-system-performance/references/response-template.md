@@ -1,62 +1,61 @@
-# Estrutura da resposta de diagnóstico
+# Diagnostic response structure
 
-Use o nível de detalhe proporcional ao problema. Não preencha campos com suposições apresentadas como fatos.
+Use a level of detail proportional to the problem. Do not fill fields with assumptions presented as facts.
 
-## Resumo executivo
+## Executive summary
 
-- **Impacto:**
-- **Sinal dominante:**
-- **Estado do diagnóstico:** confirmado, provável ou inconclusivo
-- **Hipótese principal:**
-- **Próxima ação decisiva:**
+- **Impact:**
+- **Dominant signal:**
+- **Diagnostic status:** confirmed, probable, or inconclusive
+- **Primary hypothesis:**
+- **Next decisive action:**
 
-## Evidências observadas
+## Observed evidence
 
-Liste somente fatos, com janela, unidade, segmento e fonte quando disponíveis.
+List facts only, including the window, unit, segment, and source when available.
 
-| Evidência | Baseline | Janela degradada | Interpretação limitada |
+| Evidence | Healthy baseline | Degraded window | Limited interpretation |
 |---|---:|---:|---|
-| Exemplo: p99 do endpoint | 180 ms | 2,4 s | A cauda degradou |
+| Example: endpoint p99 | 180 ms | 2.4 s | The tail degraded |
 
-## Decomposição
+## Decomposition
 
-Mostre onde o tempo ou recurso está concentrado. Diferencie tempo de espera de tempo de serviço.
+Show where time or resources are concentrated. Distinguish wait time from service time.
 
-## Hipóteses ordenadas
+## Ranked hypotheses
 
-Para cada hipótese:
+For each hypothesis:
 
-1. **Mecanismo**
-2. **Evidências favoráveis**
-3. **Evidências contrárias ou ausentes**
-4. **Medição/experimento discriminante**
-5. **Risco da coleta**
-6. **Confiança:** baixa, média ou alta
+1. **Mechanism**
+2. **Supporting evidence**
+3. **Contradictory or missing evidence**
+4. **Discriminating measurement/experiment**
+5. **Collection risk**
+6. **Confidence:** low, medium, or high
 
-## Plano de investigação
+## Investigation plan
 
-Ordene por ganho de informação e segurança:
+Order by information gain and safety:
 
-1. verificação read-only;
-2. coleta/segmentação adicional;
-3. reprodução controlada;
-4. experimento reversível, se autorizado.
+1. read-only verification;
+2. additional collection/segmentation;
+3. controlled reproduction;
+4. reversible experiment, if authorized.
 
-Inclua o resultado esperado para cada hipótese; “coletar mais logs” sem pergunta específica não é um passo suficiente.
+Include the expected result for each hypothesis; "collect more logs" without a specific question is not a sufficient step.
 
-## Causa-raiz e correção
+## Root cause and correction
 
-Só use esta seção quando a evidência sustentar o mecanismo. Separe:
+Use this section only when the evidence supports the mechanism. Separate:
 
-- causa-raiz;
-- fatores contribuintes;
-- correção imediata;
-- correção estrutural;
-- teste de regressão/performance;
-- métricas de validação;
-- condição de rollback.
+- root cause;
+- contributing factors;
+- immediate correction;
+- structural correction;
+- regression/performance test;
+- validation metrics;
+- rollback condition.
 
-## Lacunas e limites
+## Gaps and limitations
 
-Registre dados indisponíveis, suposições, possíveis vieses de amostragem e o que impediria uma conclusão mais forte.
-
+Record unavailable data, assumptions, possible sampling biases, and what would prevent a stronger conclusion.

@@ -1,112 +1,111 @@
-# Método de investigação orientado por evidências
+# Evidence-driven investigation method
 
-## 1. Definir o contrato do problema
+## 1. Define the problem contract
 
-Antes de procurar a causa, transforme “está lento” em uma afirmação mensurável:
+Before looking for the cause, turn "it is slow" into a measurable statement:
 
-- **Impacto:** quem ou o que foi afetado e com qual severidade?
-- **Operação:** qual endpoint, job, consumer, query, fluxo ou tela?
-- **Janela:** quando começou, quanto durou e ainda ocorre?
-- **Baseline:** como o mesmo sinal se comporta em uma janela saudável comparável?
-- **Demanda:** taxa de requisições, concorrência, tamanho de payload, cardinalidade e mix de operações.
-- **Mudanças:** deploy, flag, configuração, índice, schema, infraestrutura, dependência, tráfego ou dados.
-- **Objetivo:** SLO, orçamento de latência, throughput esperado ou limite de recurso.
+- **Impact:** who or what was affected, and how severely?
+- **Operation:** which endpoint, job, consumer, query, flow, or screen?
+- **Window:** when did it start, how long did it last, and is it still occurring?
+- **Baseline:** how does the same signal behave during a comparable healthy baseline?
+- **Demand:** request rate, concurrency, payload size, cardinality, and operation mix.
+- **Changes:** deployment, flag, configuration, index, schema, infrastructure, dependency, traffic, or data.
+- **Objective:** SLO, latency budget, expected throughput, or resource limit.
 
-Evite comparar períodos com workloads incompatíveis. Normalize por volume, operação e tamanho quando necessário.
+Avoid comparing periods with incompatible workloads. Normalize by volume, operation, and size when necessary.
 
-## 2. Usar a cadeia de raciocínio
+## 2. Use the reasoning chain
 
-Mantenha cada conclusão rastreável:
+Keep every conclusion traceable:
 
-1. **Métrica degradada:** p99, CPU, RSS, GC pause, lock wait, lag etc.
-2. **Comportamento observado:** gradual, abrupto, periódico, por instância, por operação ou por carga.
-3. **Subsistema envolvido:** aplicação, runtime, banco, pool, disco, rede, fila ou dependência.
-4. **Hipótese:** mecanismo que prevê sinais verificáveis.
-5. **Possível causa-raiz:** condição que originou o mecanismo e explica o início.
+1. **Degraded metric:** p99, CPU, RSS, GC pause, lock wait, lag, etc.
+2. **Observed behavior:** gradual, abrupt, periodic, per instance, per operation, or per load level.
+3. **Subsystem involved:** application, runtime, database, pool, disk, network, queue, or dependency.
+4. **Hypothesis:** a mechanism that predicts verifiable signals.
+5. **Possible root cause:** the condition that originated the mechanism and explains the onset.
 
-Exemplo: p99 subiu sem alterar p50 → apenas alguns requests esperam conexão → aquisição do pool concentra o tempo → hipótese de esgotamento do pool → possível causa-raiz: conexões retidas por transações longas após um deploy.
+Example: p99 increased while p50 remained unchanged → only some requests wait for a connection → pool acquisition accounts for most of the time → pool exhaustion hypothesis → possible root cause: connections held by long-running transactions after a deployment.
 
-## 3. Correlacionar sem confundir com causalidade
+## 3. Correlate without confusing correlation with causation
 
-Uma métrica alta durante o incidente é evidência de correlação. Para sustentar causalidade, procure pelo menos dois destes elementos:
+A high metric during the incident is evidence of correlation. To support causation, look for at least two of these elements:
 
-- ordem temporal coerente;
-- mecanismo técnico plausível;
-- segmentação que acompanha o impacto;
-- previsão confirmada por nova medição;
-- reprodução controlada;
-- melhora ao remover ou limitar o fator, com reversão segura.
+- a consistent temporal sequence;
+- a plausible technical mechanism;
+- segmentation that tracks the impact;
+- a prediction confirmed by a new measurement;
+- controlled reproduction;
+- improvement after removing or limiting the factor, with safe rollback.
 
-Não conclua “CPU causou latência” apenas porque ambas subiram. CPU pode ser efeito de retries, serialização, GC ou aumento legítimo de demanda.
+Do not conclude that "CPU caused latency" merely because both increased. CPU usage may be an effect of retries, serialization, GC, or a legitimate increase in demand.
 
-## 4. Decompor antes de otimizar
+## 4. Decompose before optimizing
 
-### Latência
+### Latency
 
-Separe, quando possível:
+Separate, when possible:
 
-`latência total = espera em fila + tempo de serviço + dependências + serialização + rede`
+`total latency = queue wait + service time + dependencies + serialization + network`
 
-Compare p50, p95 e p99. Cauda degradada com mediana estável sugere contenção, outliers, pausas, retries ou partições específicas.
+Compare p50, p95, and p99. A degraded tail with a stable median suggests contention, outliers, pauses, retries, or specific partitions.
 
-### Capacidade
+### Capacity
 
-Relacione taxa de chegada e taxa de serviço. Quando a chegada sustentada se aproxima ou supera a capacidade, pequenas variações criam filas e caudas longas.
+Relate arrival rate to service rate. When sustained arrivals approach or exceed capacity, small variations create queues and long tails.
 
-### Recursos
+### Resources
 
-Procure saturação, contenção e desperdício separadamente:
+Look for saturation, contention, and waste separately:
 
-- **Saturação:** recurso próximo do limite útil.
-- **Contenção:** trabalho bloqueado disputando um recurso.
-- **Desperdício:** trabalho repetido ou desnecessário, como polling, retries e N+1.
+- **Saturation:** a resource near its useful limit.
+- **Contention:** blocked work competing for a resource.
+- **Waste:** repeated or unnecessary work, such as polling, retries, and N+1 queries.
 
-## 5. Construir hipóteses discrimináveis
+## 5. Build discriminating hypotheses
 
-Use esta ficha por hipótese:
+Use this template for each hypothesis:
 
-- **Hipótese:** uma frase causal e específica.
-- **Explica:** quais observações ela cobre.
-- **Prevê:** qual outro sinal deve existir se estiver correta.
-- **Contradiz:** quais dados atuais a enfraquecem.
-- **Medição decisiva:** menor coleta ou experimento que a diferencia das concorrentes.
-- **Risco da coleta:** custo, overhead, privacidade e impacto operacional.
+- **Hypothesis:** a specific causal statement.
+- **Explains:** which observations it covers.
+- **Predicts:** which other signal should exist if it is correct.
+- **Contradictions:** which current data weakens it.
+- **Decisive measurement:** the smallest data collection or experiment that distinguishes it from competing hypotheses.
+- **Collection risk:** cost, overhead, privacy, and operational impact.
 
-Priorize por `plausibilidade × impacto × facilidade de discriminação`, não apenas por familiaridade.
+Prioritize by `plausibility × impact × ease of discrimination`, not merely by familiarity.
 
-## 6. Selecionar instrumentos
+## 6. Select instruments
 
-Escolha o instrumento que responde à pergunta:
+Choose the instrument that answers the question:
 
-- **Métricas:** tendência, saturação, frequência e comparação temporal.
-- **Tracing:** decomposição de uma operação e dependências críticas.
-- **Profiling:** onde CPU, alocações, locks ou tempo de execução são consumidos.
-- **Logs estruturados:** eventos discretos, erros, retries, cardinalidade e contexto.
-- **Planos de execução:** caminho, estimativas, leituras, joins, sorts e spill de queries.
-- **Dumps/snapshots:** retenção de memória, threads bloqueadas e estados raros.
+- **Metrics:** trends, saturation, frequency, and comparison over time.
+- **Tracing:** decomposition of an operation and its critical dependencies.
+- **Profiling:** where CPU, allocations, locks, or execution time are consumed.
+- **Structured logs:** discrete events, errors, retries, cardinality, and context.
+- **Execution plans:** query paths, estimates, reads, joins, sorts, and spills.
+- **Dumps/snapshots:** memory retention, blocked threads, and rare states.
 
-Reduza cardinalidade e duração de coletas caras. Remova ou proteja dados sensíveis.
+Reduce the cardinality and duration of expensive data collection. Remove or protect sensitive data.
 
-## 7. Experimentar com segurança
+## 7. Experiment safely
 
-Prefira esta ordem:
+Prefer this order:
 
-1. observação read-only;
-2. comparação histórica;
-3. reprodução local ou staging;
-4. canário com limite explícito;
-5. alteração produtiva reversível.
+1. read-only observation;
+2. historical comparison;
+3. local or staging reproduction;
+4. canary with an explicit limit;
+5. reversible production change.
 
-Defina antes do experimento: hipótese, métrica de sucesso, limite de duração, condição de interrupção e rollback. Não execute carga em produção sem autorização explícita e capacidade confirmada.
+Before the experiment, define the hypothesis, success metric, duration limit, stop condition, and rollback. Do not run load in production without explicit authorization and confirmed capacity.
 
-## 8. Encerrar sem falsa certeza
+## 8. Conclude without false certainty
 
-Classifique o resultado:
+Classify the result:
 
-- **Confirmado:** mecanismo e causa explicam as evidências e uma previsão foi validada.
-- **Provável:** evidências convergem, mas falta uma validação decisiva.
-- **Inconclusivo:** dados insuficientes ou hipóteses ainda indistinguíveis.
-- **Refutado:** previsão incompatível com os dados.
+- **Confirmed:** the mechanism and cause explain the evidence, and a prediction was validated.
+- **Probable:** the evidence converges, but decisive validation is still missing.
+- **Inconclusive:** insufficient data or hypotheses that are still indistinguishable.
+- **Refuted:** a prediction is incompatible with the data.
 
-Sempre preserve fatos observados separadamente de inferências.
-
+Always keep observed facts separate from inferences.

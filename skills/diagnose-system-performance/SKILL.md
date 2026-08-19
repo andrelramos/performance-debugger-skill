@@ -1,59 +1,58 @@
 ---
 name: diagnose-system-performance
-description: Diagnostica gargalos, regressões e incidentes de performance em sistemas a partir de evidências, usando uma árvore de decisão para latência, CPU, memória, Garbage Collector, banco de dados, conexões, erros, disco, rede e filas. Use quando houver lentidão, throughput baixo, saturação, timeouts, consumo anormal de recursos, degradação após deploy ou necessidade de investigar causa-raiz. Não use como justificativa para otimizações sem métricas ou para executar carga destrutiva sem autorização.
+description: Diagnoses system performance bottlenecks, regressions, and incidents with an evidence-driven decision tree covering latency, CPU, memory, garbage collection, databases, connections, errors, disk, network, and queues. Use when systems are slow, throughput is low, resources are saturated or consumed abnormally, timeouts occur, performance degrades after a deployment, or a root cause must be investigated. Do not use to justify optimizations without metrics or to run destructive load tests without authorization.
 ---
 
-# Diagnosticar performance de sistemas
+# Diagnose System Performance
 
-Conduza a investigação do sintoma até hipóteses testáveis. Responda no idioma do usuário e adapte comandos, métricas e exemplos à stack descoberta.
+Guide the investigation from the symptom to testable hypotheses. Answer in the user's language, and adapt commands, metrics, and examples to the identified stack.
 
-## Princípios obrigatórios
+## Required principles
 
-1. Comece pelas evidências, nunca por uma solução favorita.
-2. Preserve a cadeia: métrica degradada → comportamento observado → subsistema → hipótese → possível causa-raiz.
-3. Compare janela degradada, baseline saudável e mudanças de workload, configuração ou deploy.
-4. Diferencie correlação, mecanismo causal e causa-raiz comprovada.
-5. Mantenha diagnóstico e correção separados. Só implemente mudanças quando o usuário pedir.
-6. Declare lacunas, suposições e nível de confiança. Não invente métricas ausentes.
-7. Prefira verificações read-only. Antes de profiling invasivo, carga, restart, alteração em produção ou consulta cara, explique o risco e obtenha autorização.
+1. Start with evidence, never with a preferred solution.
+2. Preserve the chain: degraded metric → observed behavior → subsystem → hypothesis → possible root cause.
+3. Compare the degraded window, healthy baseline, and changes in workload, configuration, or deployment.
+4. Distinguish correlation, causal mechanism, and a proven root cause.
+5. Keep diagnosis and remediation separate. Implement changes only when the user asks.
+6. State gaps, assumptions, and confidence level. Do not invent missing metrics.
+7. Prefer read-only checks. Before invasive profiling, load testing, restarts, production changes, or expensive queries, explain the risk and obtain authorization.
 
-## Carregar referências
+## Load references
 
-- Leia sempre `references/investigation-method.md` antes de conduzir a investigação.
-- Consulte `references/decision-tree.md` e carregue primeiro apenas os ramos compatíveis com o sinal dominante. Expanda para ramos vizinhos quando as evidências indicarem interação.
-- Use `references/response-template.md` para estruturar a entrega e os checkpoints.
+- Always read `references/investigation-method.md` before conducting the investigation.
+- Consult `references/decision-tree.md` and initially load only the branches compatible with the dominant signal. Expand to adjacent branches when evidence indicates interaction.
+- Use `references/response-template.md` to structure the findings and checkpoints.
 
-## Fluxo de trabalho
+## Workflow
 
-### 1. Enquadrar o problema
+### 1. Frame the problem
 
-Registre impacto, serviço/operação, ambiente, janela temporal, baseline, percentis afetados, volume e mudanças recentes. Se faltarem dados essenciais, faça poucas perguntas de alto valor enquanto continua com verificações seguras disponíveis.
+Record the impact, service or operation, environment, time window, baseline, affected percentiles, volume, and recent changes. If essential data is missing, ask a few high-value questions while continuing with available safe checks.
 
-### 2. Confirmar e segmentar o sinal
+### 2. Confirm and segment the signal
 
-Valide a métrica com uma segunda visão quando possível. Segmente por endpoint, operação, instância, zona, tenant, payload, status, versão e intervalo. Procure início abrupto, crescimento gradual, periodicidade e relação com demanda.
+Validate the metric with a second view when possible. Segment by endpoint, operation, instance, zone, tenant, payload, status, version, and interval. Look for an abrupt onset, gradual growth, periodicity, and relationship to demand.
 
-### 3. Escolher o ramo inicial
+### 3. Choose the initial branch
 
-Classifique o sinal dominante entre latência, CPU, memória/GC, banco, conexões, erros/timeouts, disco/I/O, rede ou filas/throughput. Não trate a classificação como conclusão: recursos interagem e o ramo pode mudar.
+Classify the dominant signal as latency, CPU, memory/GC, database, connections, errors/timeouts, disk/I/O, network, or queues/throughput. Do not treat the classification as a conclusion: resources interact, and the branch may change.
 
-### 4. Formular hipóteses concorrentes
+### 4. Form competing hypotheses
 
-Crie de duas a cinco hipóteses ordenadas. Para cada uma, declare mecanismo, evidência favorável, evidência contrária e a medição mais barata capaz de discriminá-la.
+Create two to five ranked hypotheses. For each one, state the mechanism, supporting evidence, contrary evidence, and the least expensive measurement that can distinguish it.
 
-### 5. Instrumentar e testar
+### 5. Instrument and test
 
-Use tracing, profiling, logs estruturados, métricas por recurso e planos de execução conforme o ramo. Prefira experimentos pequenos, reversíveis e isolados. Uma hipótese só avança quando produz uma previsão observável.
+Use tracing, profiling, structured logs, per-resource metrics, and query execution plans as appropriate for the branch. Prefer small, reversible, isolated experiments. Advance a hypothesis only when it produces an observable prediction.
 
-### 6. Concluir ou iterar
+### 6. Conclude or iterate
 
-Marque cada hipótese como confirmada, enfraquecida ou inconclusiva. Se nenhuma explicar todas as evidências, volte ao último ponto comprovado e reclassifique o ramo; não force uma narrativa.
+Mark each hypothesis as confirmed, weakened, or inconclusive. If none explains all the evidence, return to the last proven point and reclassify the branch; do not force a narrative.
 
-### 7. Recomendar a próxima ação
+### 7. Recommend the next action
 
-Ordene ações por redução de risco e ganho de informação. Quando houver causa-raiz sustentada, proponha correção, validação, teste de regressão e sinais de rollback, sem executar mudanças fora do escopo autorizado.
+Prioritize actions by risk reduction and information gain. When evidence supports a root cause, propose remediation, validation, regression testing, and rollback signals without making changes outside the authorized scope.
 
-## Critério de conclusão
+## Completion criteria
 
-Considere o diagnóstico suficiente somente quando houver: sintoma reproduzido ou bem delimitado; mecanismo compatível com todas as evidências relevantes; hipótese principal distinguida das alternativas; e método de validação da correção. Se faltar algum item, entregue um diagnóstico parcial e o próximo passo decisivo.
-
+Consider the diagnosis sufficient only when the symptom has been reproduced or clearly bounded, the mechanism is compatible with all relevant evidence, the primary hypothesis has been distinguished from alternatives, and there is a method to validate the remediation. If any item is missing, provide a partial diagnosis and the next decisive step.

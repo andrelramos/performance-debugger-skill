@@ -1,18 +1,18 @@
 # Diagnose System Performance
 
-Skill portátil para investigar gargalos, regressões e incidentes de performance com um processo orientado por evidências. O mesmo conteúdo funciona em Claude Code, Codex e OpenCode.
+Portable skill for investigating bottlenecks, regressions, and performance incidents with an evidence-driven process. The same content works in Claude Code, Codex, and OpenCode.
 
-## O que ela faz
+## What it does
 
-A skill conduz a investigação pela cadeia:
+The skill guides the investigation through this chain:
 
-`métrica degradada → comportamento observado → subsistema → hipótese → possível causa-raiz`
+`degraded metric → observed behavior → subsystem → hypothesis → possible root cause`
 
-Ela cobre nove ramos: latência; CPU; memória e Garbage Collector; banco de dados; conexões e pools; erros e timeouts; disco e I/O; rede; filas e throughput.
+It covers nine branches: latency; CPU; memory and garbage collection; databases; connections and pools; errors and timeouts; disk and I/O; network; queues and throughput.
 
-O comportamento padrão é seguro: observar primeiro, separar diagnóstico de correção e pedir autorização antes de profiling invasivo, carga ou mudanças em produção.
+The default behavior is safe: observe first, keep diagnosis separate from remediation, and request authorization before invasive profiling, load testing, or production changes.
 
-## Estrutura
+## Structure
 
 ```text
 performance-diagnostics-skill/
@@ -27,15 +27,15 @@ performance-diagnostics-skill/
     └── install.sh
 ```
 
-## Instalação pessoal
+## User installation
 
-Instalar nas três ferramentas:
+Install for all three tools:
 
 ```bash
 ./scripts/install.sh --target all --scope user
 ```
 
-Instalar apenas em uma delas:
+Install for only one tool:
 
 ```bash
 ./scripts/install.sh --target claude --scope user
@@ -43,51 +43,50 @@ Instalar apenas em uma delas:
 ./scripts/install.sh --target opencode --scope user
 ```
 
-Os destinos usados são:
+The installation destinations are:
 
-| Ferramenta | Instalação pessoal | Instalação no projeto |
+| Tool | User installation | Project installation |
 |---|---|---|
 | Claude Code | `~/.claude/skills/` | `.claude/skills/` |
 | Codex | `~/.agents/skills/` | `.agents/skills/` |
 | OpenCode | `~/.config/opencode/skills/` | `.opencode/skills/` |
 
-Se já existir uma skill com o mesmo nome, o instalador interrompe sem alterar nada. Use `--force` para mover a versão anterior para um backup datado e instalar a nova.
+If a skill with the same name already exists, the installer stops without changing anything. Use `--force` to move the previous version to a timestamped backup and install the new version.
 
-## Instalação em um projeto
+## Project installation
 
 ```bash
-./scripts/install.sh --target all --scope project --project-dir /caminho/do/repositorio
+./scripts/install.sh --target all --scope project --project-dir /path/to/repository
 ```
 
-## Uso
+## Usage
 
 Claude Code:
 
 ```text
-/diagnose-system-performance Investigue por que o p99 aumentou após o último deploy.
+/diagnose-system-performance Investigate why p99 increased after the latest deployment.
 ```
 
 Codex:
 
 ```text
-$diagnose-system-performance Analise esta regressão de throughput usando as métricas disponíveis.
+$diagnose-system-performance Analyze this throughput regression using the available metrics.
 ```
 
-OpenCode pode selecionar a skill automaticamente pelo contexto. Também é possível pedir explicitamente:
+OpenCode can select the skill automatically based on context. You can also request it explicitly:
 
 ```text
-Use a skill diagnose-system-performance para investigar o crescimento contínuo de memória deste serviço.
+Use the diagnose-system-performance skill to investigate this service's continuous memory growth.
 ```
 
-## Exemplos de solicitações
+## Example requests
 
-- “O p50 está normal, mas o p99 triplicou. Investigue.”
-- “A CPU média está em 35%, porém uma instância perdeu throughput.”
-- “Depois do deploy, o pool de conexões fica esgotado em horário de pico.”
-- “O consumer acumula lag mesmo com workers aparentemente ociosos.”
-- “A RAM cresce continuamente; diferencie cache, leak e comportamento do allocator.”
+- “p50 is normal, but p99 has tripled. Investigate.”
+- “Average CPU is at 35%, but one instance has lost throughput.”
+- “After the deployment, the connection pool is exhausted during peak hours.”
+- “The consumer accumulates lag even though workers appear idle.”
+- “RAM usage grows continuously; distinguish cache growth, a leak, and allocator behavior.”
 
-## Atualização
+## Updating
 
-Edite apenas a fonte em `skills/diagnose-system-performance/` e execute novamente o instalador com `--force`. Assim, o método e a árvore permanecem idênticos nas três ferramentas.
-
+Edit only the source in `skills/diagnose-system-performance/`, then run the installer again with `--force`. This keeps the method and decision tree identical across all three tools.

@@ -13,29 +13,29 @@ FORCE="false"
 DRY_RUN="false"
 
 usage() {
-  printf '%s\n' "Uso: ./scripts/install.sh [opções]"
-  printf '%s\n' "  --target claude|codex|opencode|all   Destino (padrão: all)"
-  printf '%s\n' "  --scope user|project                 Escopo (padrão: user)"
-  printf '%s\n' "  --project-dir CAMINHO                Obrigatório no escopo project"
-  printf '%s\n' "  --force                              Cria backup e substitui versão existente"
-  printf '%s\n' "  --dry-run                            Mostra os destinos sem escrever"
-  printf '%s\n' "  --help                               Mostra esta ajuda"
+  printf '%s\n' "Usage: ./scripts/install.sh [options]"
+  printf '%s\n' "  --target claude|codex|opencode|all   Target (default: all)"
+  printf '%s\n' "  --scope user|project                 Scope (default: user)"
+  printf '%s\n' "  --project-dir PATH                   Required for project scope"
+  printf '%s\n' "  --force                              Back up and replace the existing version"
+  printf '%s\n' "  --dry-run                            Show destinations without writing"
+  printf '%s\n' "  --help                               Show this help"
 }
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --target)
-      [ "$#" -ge 2 ] || { printf '%s\n' "Falta valor para --target" >&2; exit 2; }
+      [ "$#" -ge 2 ] || { printf '%s\n' "Missing value for --target" >&2; exit 2; }
       TARGET="$2"
       shift 2
       ;;
     --scope)
-      [ "$#" -ge 2 ] || { printf '%s\n' "Falta valor para --scope" >&2; exit 2; }
+      [ "$#" -ge 2 ] || { printf '%s\n' "Missing value for --scope" >&2; exit 2; }
       SCOPE="$2"
       shift 2
       ;;
     --project-dir)
-      [ "$#" -ge 2 ] || { printf '%s\n' "Falta valor para --project-dir" >&2; exit 2; }
+      [ "$#" -ge 2 ] || { printf '%s\n' "Missing value for --project-dir" >&2; exit 2; }
       PROJECT_DIR="$2"
       shift 2
       ;;
@@ -52,7 +52,7 @@ while [ "$#" -gt 0 ]; do
       exit 0
       ;;
     *)
-      printf '%s\n' "Opção desconhecida: $1" >&2
+      printf '%s\n' "Unknown option: $1" >&2
       usage >&2
       exit 2
       ;;
@@ -61,26 +61,26 @@ done
 
 case "$TARGET" in
   claude|codex|opencode|all) ;;
-  *) printf '%s\n' "Target inválido: $TARGET" >&2; exit 2 ;;
+  *) printf '%s\n' "Invalid target: $TARGET" >&2; exit 2 ;;
 esac
 
 case "$SCOPE" in
   user|project) ;;
-  *) printf '%s\n' "Scope inválido: $SCOPE" >&2; exit 2 ;;
+  *) printf '%s\n' "Invalid scope: $SCOPE" >&2; exit 2 ;;
 esac
 
 [ -f "$SOURCE_DIR/SKILL.md" ] || {
-  printf '%s\n' "Fonte da skill não encontrada: $SOURCE_DIR" >&2
+  printf '%s\n' "Skill source not found: $SOURCE_DIR" >&2
   exit 1
 }
 
 if [ "$SCOPE" = "project" ]; then
   [ -n "$PROJECT_DIR" ] || {
-    printf '%s\n' "--project-dir é obrigatório para --scope project" >&2
+    printf '%s\n' "--project-dir is required for --scope project" >&2
     exit 2
   }
   [ -d "$PROJECT_DIR" ] || {
-    printf '%s\n' "Diretório de projeto inexistente: $PROJECT_DIR" >&2
+    printf '%s\n' "Project directory does not exist: $PROJECT_DIR" >&2
     exit 2
   }
   PROJECT_DIR=$(CDPATH= cd -- "$PROJECT_DIR" && pwd)
@@ -108,8 +108,8 @@ preflight_for() {
   base=$(destination_base "$platform")
   destination="$base/$SKILL_NAME"
   if { [ -e "$destination" ] || [ -L "$destination" ]; } && [ "$FORCE" != "true" ]; then
-    printf '%s\n' "[$platform] Já existe: $destination" >&2
-    printf '%s\n' "Nenhum destino foi alterado. Use --force para criar backup e atualizar." >&2
+    printf '%s\n' "[$platform] Already exists: $destination" >&2
+    printf '%s\n' "No destinations were changed. Use --force to create a backup and update." >&2
     exit 1
   fi
 }
@@ -127,8 +127,8 @@ install_for() {
   mkdir -p "$base"
   if [ -e "$destination" ] || [ -L "$destination" ]; then
     if [ "$FORCE" != "true" ]; then
-      printf '%s\n' "[$platform] Já existe: $destination" >&2
-      printf '%s\n' "Use --force para criar backup e atualizar." >&2
+      printf '%s\n' "[$platform] Already exists: $destination" >&2
+      printf '%s\n' "Use --force to create a backup and update." >&2
       exit 1
     fi
     timestamp=$(date '+%Y%m%d-%H%M%S')
@@ -139,11 +139,11 @@ install_for() {
       backup="$destination.backup-$timestamp-$counter"
     done
     mv "$destination" "$backup"
-    printf '%s\n' "[$platform] Backup: $backup"
+    printf '%s\n' "[$platform] Backup created: $backup"
   fi
 
   cp -R "$SOURCE_DIR" "$destination"
-  printf '%s\n' "[$platform] Instalado: $destination"
+  printf '%s\n' "[$platform] Installed: $destination"
 }
 
 if [ "$DRY_RUN" != "true" ]; then

@@ -2,66 +2,66 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Ensinar a skill a investigar o planner quando o mesmo query shape fica lento de forma intermitente e a tratar index hints apenas como mitigação temporária.
+**Goal:** Teach the skill to investigate the planner when the same query shape becomes intermittently slow and to treat index hints only as temporary, palliative, reversible, monitored mitigations.
 
-**Architecture:** A mudança fica isolada em uma nova subseção de `4.1 Queries individuais lentas` na árvore de decisão existente. Um cenário de recuperação de referência verifica se o agente distingue planejamento de execução, considera índices e colunas pesadas e limita a recomendação de index hints.
+**Architecture:** The change is isolated in a new subsection of `4.1 Slow individual queries` in the existing decision tree. A reference retrieval scenario verifies that the agent distinguishes planning/optimization time from execution time, considers indexes and heavy columns, and limits recommendations of index hints.
 
-**Tech Stack:** Markdown, skill portátil para Claude Code, Codex e OpenCode.
+**Tech Stack:** Markdown, portable skill for Claude Code, Codex, and OpenCode.
 
 ## Global Constraints
 
-- Preservar investigação orientada por evidências e separar diagnóstico de correção.
-- Não concluir que excesso de índices ou colunas pesadas são a causa sem medição.
-- Descrever index hint como mitigação paliativa, reversível e monitorada, não como solução padrão.
-- Não criar commits sem solicitação explícita do usuário.
+- Preserve evidence-driven investigation and separate diagnosis from correction.
+- Do not conclude that excessive indexes or heavy columns are the root cause without measurement.
+- Describe an index hint only as a temporary, palliative, reversible, monitored mitigation, not as the default solution.
+- Do not create commits without an explicit user request.
 
 ---
 
-### Task 1: Adicionar e validar o ramo de planner intermitente
+### Task 1: Add and validate the intermittent planner branch
 
 **Files:**
 - Modify: `skills/diagnose-system-performance/references/decision-tree.md:132-148`
 
 **Interfaces:**
-- Consumes: ramo `4.1 Queries individuais lentas` e os princípios definidos em `skills/diagnose-system-performance/SKILL.md`.
-- Produces: subseção `4.1.1 Mesmo query shape lento apenas em algumas execuções`.
+- Consumes: the `4.1 Slow individual queries` branch and the principles defined in `skills/diagnose-system-performance/SKILL.md`.
+- Produces: subsection `4.1.1 Same query shape slow only during some executions`.
 
-- [ ] **Step 1: Executar o cenário sem a nova orientação**
+- [ ] **Step 1: Run the scenario without the new guidance**
 
-Use um agente em contexto limpo, sem fornecer o texto novo, com o prompt:
+Use an agent in a clean context, without providing the new text, with this prompt:
 
 ```text
-Uma consulta com o mesmo query shape normalmente leva 30 ms, mas algumas execuções levam 2 s. O tempo extra parece ocorrer antes da execução. A tabela tem muitos índices e uma coluna vector grande. Usando somente a skill diagnose-system-performance atual, produza uma investigação curta e diga se forçaria um índice.
+A query with the same query shape normally takes 30 ms, but some executions take 2 s. The extra time appears to occur before execution. The table has many indexes and a large vector column. Using only the current diagnose-system-performance skill, produce a short investigation and state whether you would force an index.
 ```
 
-Resultado esperado: a resposta não recupera de forma confiável todos estes requisitos: separar planner de execução; comparar execuções; avaliar excesso e relevância dos índices; verificar índice, leitura e projeção da coluna pesada; e restringir index hint a mitigação temporária.
+Expected result: the response does not reliably retrieve all these requirements: separate planning/optimization time from execution time; compare executions; evaluate the number and relevance of indexes; check the indexing, reading, and projection of the heavy column; and restrict an index hint to a temporary, palliative, reversible, monitored mitigation.
 
-- [ ] **Step 2: Adicionar a orientação mínima**
+- [ ] **Step 2: Add the minimal guidance**
 
-Inserir após a lista de causas de `4.1`:
+Insert after the list of causes in `4.1`:
 
 ```markdown
-#### 4.1.1 Mesmo query shape lento apenas em algumas execuções
+#### 4.1.1 Same query shape slow only during some executions
 
-Se o mesmo query shape é lento de forma intermitente, compare execuções rápidas e lentas com parâmetros, cardinalidade, cache e concorrência equivalentes. Separe o tempo de planejamento ou otimização do tempo de execução e verifique se houve escolha ou replanejamento de planos diferentes.
+If the same query shape is intermittently slow, compare fast and slow executions with equivalent parameters, cardinality, cache, and concurrency. Separate planning/optimization time from execution time and check whether different plans were selected or replanned.
 
-Se o planner, otimizador ou componente equivalente estiver lento:
+If the planner, optimizer, or equivalent component is slow:
 
-- avalie quantos índices candidatos ele considera e se há índices redundantes, sobrepostos, irrelevantes para o query shape ou pouco seletivos; reduza ou redesenhe índices somente depois de confirmar uso, redundância e impacto;
-- verifique estatísticas, distribuição dos dados e diferenças entre estimativas e cardinalidade real;
-- procure colunas pesadas, como vetores, arquivos, binários, BLOBs ou documentos grandes, e confirme se entram em algum índice, na leitura de linhas/documentos candidatos ou no resultado por falta de projeção; mantenha essas colunas fora do caminho crítico quando não forem necessárias.
+- evaluate how many candidate indexes it considers and whether any indexes are redundant, overlapping, irrelevant to the query shape, or insufficiently selective; reduce or redesign indexes only after confirming usage, redundancy, and impact;
+- check statistics, data distribution, and differences between estimates and actual cardinality;
+- look for heavy columns, such as vectors, files, binary data, BLOBs, or large documents, and confirm whether they are included in an index, read with candidate rows/documents, or returned because projection is missing; keep these columns out of the critical path when they are not needed.
 
-Alguns bancos permitem limitar a escolha do planner com um index hint ou mecanismo equivalente; MongoDB é um exemplo. Considere isso apenas como mitigação temporária, paliativa, reversível e monitorada para os query shapes afetados: reduzir os planos candidatos pode evitar planejamento lento, mas forçar um índice remove parte da capacidade do banco de se adaptar a mudanças de dados e workload. Prefira corrigir índices, estatísticas, projeção e modelagem que causam a instabilidade.
+Some databases allow an index hint or equivalent mechanism to limit the planner's choices; MongoDB is one example. Consider this only as a temporary, palliative, reversible, monitored mitigation for the affected query shapes: reducing candidate plans may avoid slow planning/optimization, but forcing an index removes some of the database's ability to adapt to changes in data and workload. Prefer correcting the indexes, statistics, projection, and modeling that cause the instability.
 ```
 
-- [ ] **Step 3: Reexecutar o cenário com a skill atualizada**
+- [ ] **Step 3: Rerun the scenario with the updated skill**
 
-Execute o mesmo prompt em contexto limpo, agora disponibilizando a skill atualizada.
+Run the same prompt in a clean context, now providing the updated skill.
 
-Resultado esperado: a resposta cobre os cinco pontos diagnósticos, não recomenda remover índices sem evidência e apresenta index hint apenas como mitigação temporária com monitoramento e risco explícitos.
+Expected result: the response covers all five diagnostic points, does not recommend removing indexes without evidence, and presents an index hint only as a temporary, palliative, reversible, monitored mitigation with explicit monitoring and risk.
 
-- [ ] **Step 4: Verificar estrutura e diff**
+- [ ] **Step 4: Verify structure and diff**
 
 Run: `git diff --check && git diff -- skills/diagnose-system-performance/references/decision-tree.md`
 
-Expected: `git diff --check` sem saída; o diff contém somente a nova subseção no ramo `4.1`.
+Expected: `git diff --check` produces no output; the diff contains only the new subsection in the `4.1` branch.

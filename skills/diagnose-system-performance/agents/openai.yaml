@@ -1,4 +1,4 @@
 interface:
-  display_name: "Diagnóstico de Performance"
-  short_description: "Investigue gargalos com evidências"
-  default_prompt: "Use $diagnose-system-performance para investigar este problema de performance a partir das métricas e evidências disponíveis."
+  display_name: "System Performance Diagnosis"
+  short_description: "Investigate bottlenecks with evidence"
+  default_prompt: "Use $diagnose-system-performance to investigate this performance problem using the available metrics and evidence."
