@@ -143,6 +143,18 @@ Possíveis causas:
 - funções/conversões impedindo acesso eficiente;
 - lock wait confundido com execução lenta.
 
+#### 4.1.1 Mesmo query shape lento apenas em algumas execuções
+
+Se o mesmo query shape é lento de forma intermitente, compare execuções rápidas e lentas com parâmetros, cardinalidade, cache e concorrência equivalentes. Separe o tempo de planejamento ou otimização do tempo de execução e verifique se houve escolha ou replanejamento de planos diferentes.
+
+Se o planner, otimizador ou componente equivalente estiver lento:
+
+- avalie quantos índices candidatos ele considera e se há índices redundantes, sobrepostos, irrelevantes para o query shape ou pouco seletivos; reduza ou redesenhe índices somente depois de confirmar uso, redundância e impacto;
+- verifique estatísticas, distribuição dos dados e diferenças entre estimativas e cardinalidade real;
+- procure colunas pesadas, como vetores, arquivos, binários, BLOBs ou documentos grandes, e confirme se entram em algum índice, na leitura de linhas/documentos candidatos ou no resultado por falta de projeção; mantenha essas colunas fora do caminho crítico quando não forem necessárias.
+
+Alguns bancos permitem limitar a escolha do planner com um index hint ou mecanismo equivalente; MongoDB é um exemplo. Considere isso apenas como mitigação temporária, paliativa, reversível e monitorada para os query shapes afetados: reduzir os planos candidatos pode evitar planejamento lento, mas forçar um índice remove parte da capacidade do banco de se adaptar a mudanças de dados e workload. Prefira corrigir índices, estatísticas, projeção e modelagem que causam a instabilidade.
+
 ### 4.2 Muitas queries por operação
 
 Procure N+1, lazy loading, chamadas duplicadas, chatty APIs, paginação implementada em memória e falta de batching. Meça queries por transação e round-trips, não apenas duração média de cada query.
@@ -272,4 +284,3 @@ Pode haver batching maior, fila deliberada ou troca entre vazão e tempo de resp
 - Backlog: serviço lento → memória maior → GC/CPU → serviço ainda mais lento.
 - Logging excessivo: erro/retry → disco e CPU → latência.
 - Hot partition: distribuição desigual → core/shard/fila específicos saturados com médias globais normais.
-
