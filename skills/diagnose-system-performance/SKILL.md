@@ -1,6 +1,9 @@
 ---
 name: diagnose-system-performance
 description: Diagnoses system performance bottlenecks, regressions, and incidents with an evidence-driven decision tree covering latency, CPU, memory, garbage collection, databases, connections, errors, disk, network, and queues. Use when systems are slow, throughput is low, resources are saturated or consumed abnormally, timeouts occur, performance degrades after a deployment, or a root cause must be investigated. Do not use to justify optimizations without metrics or to run destructive load tests without authorization.
+license: MIT
+metadata:
+  author: andrelramos
 ---
 
 # Diagnose System Performance

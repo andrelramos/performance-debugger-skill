@@ -1,5 +1,21 @@
 # Diagnose System Performance
 
+[![skills.sh](https://skills.sh/b/andrelramos/performance-debugger-skill)](https://skills.sh/andrelramos/performance-debugger-skill)
+
+## Install with skills.sh
+
+Install in the current project:
+
+```bash
+npx skills add andrelramos/performance-debugger-skill --skill diagnose-system-performance
+```
+
+Install globally:
+
+```bash
+npx skills add andrelramos/performance-debugger-skill --skill diagnose-system-performance --global
+```
+
 Portable skill for investigating bottlenecks, regressions, and performance incidents with an evidence-driven process. The same content works in Claude Code, Codex, and OpenCode.
 
 ## What it does
@@ -27,7 +43,9 @@ performance-diagnostics-skill/
     └── install.sh
 ```
 
-## User installation
+## Alternative installation
+
+The bundled script remains available for explicit Claude Code, Codex, and OpenCode targets.
 
 Install for all three tools:
 
