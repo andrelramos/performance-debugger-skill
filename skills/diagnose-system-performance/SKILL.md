@@ -50,7 +50,7 @@ Use tracing, profiling, structured logs, per-resource metrics, and query executi
 
 ### 6. Conclude or iterate
 
-Mark each hypothesis as confirmed, weakened, or inconclusive. If none explains all the evidence, return to the last proven point and reclassify the branch; do not force a narrative.
+Mark each hypothesis as confirmed, weakened, or inconclusive. Before closing, read the "Signals that rule out" block of the current branch: a refuting signal weakens the hypothesis regardless of how much supporting evidence you have collected. If none explains all the evidence, return to the last proven point and reclassify the branch; do not force a narrative.
 
 ### 7. Recommend the next action
 

@@ -57,6 +57,13 @@ Decisive measurements: outlier traces, distribution by instance/partition, pool 
 - Compare useful concurrency with blocked time.
 - Test whether the cost per operation also grows; this indicates contention, lower cache effectiveness, or volume-dependent complexity.
 
+### 1.5 Signals that rule out latency
+
+- Server-side service time and queue wait are both unchanged across the window, but the reported latency degraded: the time is in a layer you have not measured. Verify where instrumentation starts and ends, then look at the client, proxy, load balancer, and network branch.
+- Latency per operation is unchanged, but throughput fell or the backlog grew: the constraint is capacity or consumers, not the cost of an operation. Continue in queues and throughput.
+- Only the average moved, while p50, p95, and p99 are stable: the operation mix changed. Compare latency per operation at a constant mix before investigating further.
+- The degraded window has a higher arrival rate and an unchanged cost per operation: this is a demand change, not a regression. Compare against capacity, not against a code change.
+
 ## 2. CPU
 
 ### 2.1 All cores are highly utilized
@@ -92,6 +99,14 @@ Investigate nonlinear complexity, average data size, cache hit ratio, contention
 
 Look for spin locks, busy waiting, aggressive polling, a retry storm, unnecessary compression, excessive logging, cache invalidation, or garbage collection. Distinguish user, system, steal, and iowait time.
 
+### 2.5 Signals that rule out CPU
+
+- Per-core utilization stayed flat and the run queue stayed near zero while latency degraded: the work is waiting, not computing. Continue in connections and pools, disk and I/O, or network.
+- CPU increased only after latency increased: CPU is probably an effect of retries, accumulated work, or garbage collection. Re-anchor the investigation on whichever signal moved first.
+- The sampling profile is dominated by parked, blocked, or idle frames: the threads are not running. The constraint is whatever they are waiting for.
+- CPU per transaction is unchanged versus the baseline and only the transaction rate increased: this is demand growth, not a CPU regression. Continue in queues and throughput.
+- Adding cores or instances leaves latency unchanged: serialization or waiting dominates. Review the serial stage in 2.2 before leaving this branch.
+
 ## 3. Memory and garbage collection
 
 ### 3.1 Memory grows continuously and does not return
@@ -126,6 +141,13 @@ Correlate pauses and garbage collection CPU time with p95/p99. Heap/collector tu
 ### 3.4 Swap, page faults, or host pressure
 
 If the heap appears healthy but latency worsens, check the total working set, neighboring containers, major page faults, swap, cgroup limits, and OOM kills. The problem may be outside the runtime.
+
+### 3.5 Signals that rule out memory and garbage collection
+
+- Heap occupancy after a full collection is flat across snapshots spanning the degraded window: there is no retention growth. If the resident set still grows, the memory is native, off-heap, or allocator behavior; continue in 3.4.
+- Pause time and garbage collection CPU are unchanged while p95/p99 degraded: pauses do not account for the tail. Return to 1.3 and look for contention, retries, or a degraded partition.
+- The allocation rate and the live set are both unchanged, but collections became more frequent: the heap sizing or collector configuration changed, not the workload. Compare runtime flags and container limits across versions.
+- Memory grows and returns to the baseline on every cycle: this is expected cache or allocator behavior. Pursue it only if the peak violates a limit.
 
 ## 4. Database
 
@@ -177,6 +199,13 @@ Measure lock wait, blockers, deadlocks, and transaction duration and scope. Look
 
 Correlate CPU, I/O, buffer/cache hit, memory, active sessions, queue, replica lag, and limits. Confirm whether the saturation comes from the workload under investigation or from neighbors. Scaling capacity may provide relief, but does not prove root cause.
 
+### 4.6 Signals that rule out the database
+
+- Server-side execution time is unchanged while the time observed by the client degraded: the cost is in acquisition, transfer, or deserialization. Continue in connections and pools, or in 4.3.
+- The plan, the examined rows, and the returned bytes are identical between the healthy and the degraded window: the query did not change. Check saturation and lock wait before touching indexes.
+- Database CPU, I/O, and active sessions are flat during the degraded window: the database is not saturated. Suspect the caller, starting with the number of queries per operation in 4.2.
+- Every operation degraded uniformly, including those that touch different collections/tables and different indexes: suspect a shared layer such as the host, the connection, or the network rather than any individual query.
+
 ## 5. Connections and pools
 
 ### 5.1 Long time to acquire a connection/resource
@@ -198,6 +227,13 @@ Do not automatically increase the pool. Given the approximate relationship `conc
 
 Identify the shared resource: connection, lock, semaphore, socket, executor, or quota. A larger thread pool may only move the queue and increase memory/context switches.
 
+### 5.3 Signals that rule out connections and pools
+
+- Utilization stayed well below the maximum and the wait queue stayed empty: acquisition is not the constraint, even if the pool looks busy. Continue in whatever the connection is used for.
+- Acquisition time is flat while total latency degraded: the resource is obtained quickly and held for a long time. The cost is downstream; continue in the database branch.
+- The threads that are waiting are blocked on a lock, semaphore, or quota that is not the pool: identify the actual resource before tuning pool size.
+- In a controlled test, increasing the pool does not improve latency and degrades the destination: the destination is the constraint. Continue in 4.5.
+
 ## 6. Errors and timeouts
 
 ### 6.1 Establish the origin
@@ -218,6 +254,13 @@ Retries can turn a small degradation into saturation. Measure attempts per opera
 - timeouts with low CPU: blocking, dependency, pool, network, or I/O;
 - 5xx errors after latency increases: likely a consequence, not necessarily the initial cause.
 
+### 6.4 Signals that rule out errors and timeouts
+
+- The error rate is flat while latency degraded: the errors are not part of this incident. Do not build the narrative around them.
+- Attempts per operation are unchanged versus the baseline: retry amplification is refuted, and the additional load is real.
+- Errors and latency started at the same instant and recovered together, with no change in capacity: both are probably effects of a common cause. Look for the discrete change instead of a chain between them.
+- Only one caller reports timeouts while the same operation succeeds for the others: the budget or the client configuration differs, not the service. Compare timeout settings per caller.
+
 ## 7. Disk and I/O
 
 ### 7.1 Distinguish the constraint
@@ -236,6 +279,13 @@ Observe latency, IOPS, throughput, operation size, queue depth, and iowait. High
 - reading/writing large files on the synchronous path.
 
 Correlate the operation's I/O time with the device queue and activity from other processes.
+
+### 7.3 Signals that rule out disk and I/O
+
+- Device latency, queue depth, and iowait are all flat during the degraded window: storage is not the constraint, even if the process performs a lot of I/O.
+- Tracing shows that I/O time is a small fraction of the operation's total time: the decomposition already refutes this branch. Return to 1.1.
+- The device shows high throughput and healthy latency while the application is slow: suspect synchronous access patterns, small operations, or fsync frequency rather than device capacity.
+- iowait is high on a host whose own devices are idle: the wait is on a remote or networked volume. Continue in the network branch.
 
 ## 8. Network
 
@@ -256,6 +306,13 @@ Measure DNS, TCP connection, TLS, time to first byte, transfer, RTT, loss, retra
 
 Compare by origin, destination, zone, protocol, and version. Avoid concluding "network" merely because an external call appears slow.
 
+### 8.3 Signals that rule out the network
+
+- DNS, connection, and TLS times are unchanged, and time to first byte accounts for the whole increase: the remote service is slow, not the path. Investigate the dependency itself.
+- Round trip time, retransmissions, and payload size are unchanged between the same two endpoints: the path is healthy. Do not attribute the increase to loss because the absolute value is nonzero.
+- Only one client or one direction degraded while others share the same path: the problem is at an endpoint, not on the path.
+- The number of round trips per operation is unchanged and each one costs the same as in the baseline: the network cost did not change. Return to the decomposition in 1.1.
+
 ## 9. Queues and throughput
 
 ### 9.1 Growing backlog
@@ -271,6 +328,13 @@ Compare arrival rate, completion rate, effective concurrency, service time, and 
 ### 9.2 Low throughput without a saturated resource
 
 Look for a concurrency limit, serial stage, small batch, external wait, backpressure, rate limit, insufficient partitions, or excessive coordination.
+
+### 9.4 Signals that rule out queues and throughput
+
+- The backlog stayed at zero throughout the window while latency degraded: there is no queue to blame. Return to the latency branch.
+- Arrival rate, service rate, and effective concurrency are all unchanged, but the age of the oldest message grew: suspect ordering, a stuck partition, or a message that never completes, not capacity.
+- Throughput fell while every downstream resource also fell below its baseline: the constraint is upstream. Confirm the arrival rate and look for a producer problem or backpressure applied earlier in the chain.
+- Consumers are saturated and the backlog grows proportionally to a legitimate increase in arrivals: the system is at capacity and behaving as designed. This is a capacity decision, not a defect to diagnose.
 
 ### 9.3 High throughput with worse latency
 
