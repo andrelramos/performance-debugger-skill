@@ -133,9 +133,9 @@ Run:
 
 ```bash
 test -f .github/workflows/validate-skill.yml && \
-rg -q 'actions/checkout@11d5960a326750d5838078e36cf38b85af677262' .github/workflows/validate-skill.yml && \
+rg -q 'actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09' .github/workflows/validate-skill.yml && \
 rg -q 'persist-credentials: false' .github/workflows/validate-skill.yml && \
-rg -q 'actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020' .github/workflows/validate-skill.yml && \
+rg -q 'actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444' .github/workflows/validate-skill.yml && \
 rg -q 'npx --yes skills@1\.5\.23 add \. --list' .github/workflows/validate-skill.yml && \
 rg -Fq "perl -pe 's/\e\[[0-9;]*[A-Za-z]//g' /tmp/skills-list.txt > /tmp/skills-list-plain.txt" .github/workflows/validate-skill.yml && \
 rg -Fq 'grep -q "Found 1 skill" /tmp/skills-list-plain.txt' .github/workflows/validate-skill.yml && \
@@ -163,10 +163,10 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           persist-credentials: false
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:
           node-version: 22
       - name: Validate skills.sh discovery
