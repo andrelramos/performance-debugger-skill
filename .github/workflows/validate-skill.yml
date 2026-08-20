@@ -22,7 +22,8 @@ jobs:
         run: |
           set -o pipefail
           npx --yes skills@1.5.23 add . --list | tee /tmp/skills-list.txt
-          grep -q "Found 1 skill" /tmp/skills-list.txt
-          grep -q "diagnose-system-performance" /tmp/skills-list.txt
+          perl -pe 's/\e\[[0-9;]*[A-Za-z]//g' /tmp/skills-list.txt > /tmp/skills-list-plain.txt
+          grep -q "Found 1 skill" /tmp/skills-list-plain.txt
+          grep -q "diagnose-system-performance" /tmp/skills-list-plain.txt
       - name: Validate installer syntax
         run: sh -n scripts/install.sh

@@ -137,8 +137,9 @@ rg -q 'actions/checkout@11d5960a326750d5838078e36cf38b85af677262' .github/workfl
 rg -q 'persist-credentials: false' .github/workflows/validate-skill.yml && \
 rg -q 'actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020' .github/workflows/validate-skill.yml && \
 rg -q 'npx --yes skills@1\.5\.23 add \. --list' .github/workflows/validate-skill.yml && \
-rg -q 'Found 1 skill' .github/workflows/validate-skill.yml && \
-rg -q 'diagnose-system-performance' .github/workflows/validate-skill.yml && \
+rg -Fq "perl -pe 's/\e\[[0-9;]*[A-Za-z]//g' /tmp/skills-list.txt > /tmp/skills-list-plain.txt" .github/workflows/validate-skill.yml && \
+rg -Fq 'grep -q "Found 1 skill" /tmp/skills-list-plain.txt' .github/workflows/validate-skill.yml && \
+rg -Fq 'grep -q "diagnose-system-performance" /tmp/skills-list-plain.txt' .github/workflows/validate-skill.yml && \
 rg -q 'sh -n scripts/install.sh' .github/workflows/validate-skill.yml
 ```
 
@@ -173,8 +174,9 @@ jobs:
         run: |
           set -o pipefail
           npx --yes skills@1.5.23 add . --list | tee /tmp/skills-list.txt
-          grep -q "Found 1 skill" /tmp/skills-list.txt
-          grep -q "diagnose-system-performance" /tmp/skills-list.txt
+          perl -pe 's/\e\[[0-9;]*[A-Za-z]//g' /tmp/skills-list.txt > /tmp/skills-list-plain.txt
+          grep -q "Found 1 skill" /tmp/skills-list-plain.txt
+          grep -q "diagnose-system-performance" /tmp/skills-list-plain.txt
       - name: Validate installer syntax
         run: sh -n scripts/install.sh
 ```
@@ -192,8 +194,9 @@ Run:
 ```bash
 set -o pipefail
 npx --yes skills@1.5.23 add . --list | tee /tmp/skills-list.txt
-grep -q "Found 1 skill" /tmp/skills-list.txt
-grep -q "diagnose-system-performance" /tmp/skills-list.txt
+perl -pe 's/\e\[[0-9;]*[A-Za-z]//g' /tmp/skills-list.txt > /tmp/skills-list-plain.txt
+grep -q "Found 1 skill" /tmp/skills-list-plain.txt
+grep -q "diagnose-system-performance" /tmp/skills-list-plain.txt
 sh -n scripts/install.sh
 git diff --check
 ```
