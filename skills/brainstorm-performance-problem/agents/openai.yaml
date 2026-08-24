@@ -1,0 +1,4 @@
+interface:
+  display_name: "Performance Problem Brainstorm"
+  short_description: "Locate a vague slowdown through a guided interview"
+  default_prompt: "Use $brainstorm-performance-problem to interview me until this performance complaint becomes a located symptom with ranked hypotheses and a decisive next measurement."
