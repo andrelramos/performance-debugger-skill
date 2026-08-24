@@ -1,0 +1,21 @@
+{
+  "name": "codearqtech",
+  "displayName": "CodeArq Tech Performance Skills",
+  "version": "1.0.0",
+  "description": "Evidence-driven performance skills: interview a vague slowdown into a located symptom, then diagnose it with a nine-branch decision tree.",
+  "author": {
+    "name": "CodeArq Tech",
+    "url": "https://codearq.tech"
+  },
+  "homepage": "https://codearq.tech",
+  "repository": "https://github.com/CodeArq-tech/performance-debugger-skill",
+  "license": "MIT",
+  "keywords": [
+    "performance",
+    "diagnosis",
+    "observability",
+    "latency",
+    "profiling",
+    "sre"
+  ]
+}

@@ -1,8 +1,8 @@
 # Performance Debugger Skills
 
-[![skills.sh](https://skills.sh/b/andrelramos/performance-debugger-skill)](https://skills.sh/andrelramos/performance-debugger-skill)
+[![skills.sh](https://skills.sh/b/CodeArq-tech/performance-debugger-skill)](https://skills.sh/CodeArq-tech/performance-debugger-skill)
 
-Two portable skills for performance work, built on the same evidence-driven process. The same content works in Claude Code, Codex, and OpenCode.
+Two portable skills for performance work, built on the same evidence-driven process, maintained by [CodeArq Tech](https://codearq.tech). The same content runs in Claude Code, Codex, Gemini CLI, OpenCode and Amp.
 
 | Skill | Use it when |
 |---|---|
@@ -11,25 +11,85 @@ Two portable skills for performance work, built on the same evidence-driven proc
 
 Start with the brainstorm skill when the problem is still a complaint. It hands off to the diagnostic skill once the symptom is located.
 
-## Install with skills.sh
+## Namespacing
 
-Install in the current project:
+Every skill published here is invoked under the `codearqtech` namespace, using whatever mechanism the host agent provides:
 
-```bash
-npx skills add andrelramos/performance-debugger-skill --skill brainstorm-performance-problem
-npx skills add andrelramos/performance-debugger-skill --skill diagnose-system-performance
+| Agent | Mechanism | Invocation |
+|---|---|---|
+| Claude Code | plugin namespace | `/codearqtech:diagnose-system-performance` |
+| Gemini CLI | namespaced slash command | `/codearqtech:diagnose-system-performance` |
+| Codex | name prefix | `$codearqtech-diagnose-system-performance` |
+| OpenCode, Amp | name prefix | `codearqtech-diagnose-system-performance` |
+
+Agents that have no namespace mechanism get the prefix baked into the installed skill name, and the installer rewrites the cross-references between the two skills so the handoff still resolves. Pass `--namespace ''` to install them unprefixed.
+
+## Install
+
+### Claude Code (plugin — namespaced)
+
+```text
+/plugin marketplace add CodeArq-tech/performance-debugger-skill
+/plugin install codearqtech@codearqtech
 ```
 
-Install globally:
+Both skills arrive namespaced:
 
-```bash
-npx skills add andrelramos/performance-debugger-skill --skill brainstorm-performance-problem --global
-npx skills add andrelramos/performance-debugger-skill --skill diagnose-system-performance --global
+```text
+/codearqtech:brainstorm-performance-problem Checkout feels slow since last week and nobody knows why.
+/codearqtech:diagnose-system-performance Investigate why p99 increased after the latest deployment.
 ```
 
-Install both if you want the handoff: the brainstorm skill reads the diagnostic skill's decision tree when both live under the same skills directory, and falls back to a compact routing table when it does not.
+### Codex, Gemini CLI, OpenCode, Amp
 
-> **Note:** cloning or opening this repository does not make the skills available. Agents do not discover skills from this repo's `skills/` directory — Claude Code, for example, only loads skills from `~/.claude/skills/` (user), `.claude/skills/` (project), or plugins. Run one of the install commands above, then start a new session so the skills are picked up.
+All four read the shared `.agents/skills` alias, so one install covers them:
+
+```bash
+git clone https://github.com/CodeArq-tech/performance-debugger-skill
+cd performance-debugger-skill
+./scripts/install.sh --target agents --scope user
+```
+
+Gemini CLI can additionally get real `/codearqtech:<skill>` slash commands:
+
+```bash
+./scripts/install.sh --target gemini --scope user --gemini-commands
+```
+
+### skills.sh
+
+```bash
+npx skills add CodeArq-tech/performance-debugger-skill --skill brainstorm-performance-problem
+npx skills add CodeArq-tech/performance-debugger-skill --skill diagnose-system-performance
+```
+
+skills.sh installs the directory names as they appear in `skills/`, so this route produces unprefixed names. Use the installer script when you want the `codearqtech-` prefix.
+
+> **Note:** cloning this repository does not make the skills available. Agents do not discover skills from this repo's `skills/` directory — they load from `~/.claude/skills/`, `~/.agents/skills/`, `~/.codex/skills/`, and their project-scoped equivalents, or from plugins. Run one of the install commands above, then start a new session.
+
+### Installer reference
+
+```bash
+./scripts/install.sh --list
+./scripts/install.sh --help
+./scripts/install.sh --target all --scope user
+./scripts/install.sh --target claude --scope user --skill brainstorm-performance-problem
+./scripts/install.sh --target agents --scope project --project-dir /path/to/repository
+```
+
+| Target | User destination | Project destination |
+|---|---|---|
+| `claude` | `~/.claude/skills/` | `.claude/skills/` |
+| `codex` | `~/.codex/skills/` | `.codex/skills/` |
+| `opencode` | `~/.config/opencode/skills/` | `.opencode/skills/` |
+| `amp` | `~/.config/amp/skills/` | `.agents/skills/` |
+| `gemini` | `~/.gemini/skills/` | `.gemini/skills/` |
+| `agents` | `~/.agents/skills/` | `.agents/skills/` |
+| `all` | `claude` + `codex` + `agents` | same three |
+
+`agents` is the shared alias read by Codex, Gemini CLI, OpenCode and Amp; prefer it over the per-agent targets unless you need one specific location.
+
+Other options: `--namespace NAME` (default `codearqtech`, `''` disables), `--gemini-commands`, `--force` to move the previous version to a timestamped backup, `--dry-run` to print destinations without writing. If a skill already exists and `--force` is not passed, the installer stops without changing anything.
 
 ## What they do
 
@@ -48,7 +108,7 @@ The default behavior of both is safe: observe first, keep diagnosis separate fro
 Start it with the complaint exactly as you received it. Vagueness is the expected input:
 
 ```text
-/brainstorm-performance-problem Checkout feels slow since last week and nobody knows why.
+/codearqtech:brainstorm-performance-problem Checkout feels slow since last week and nobody knows why.
 ```
 
 ### What a session looks like
@@ -127,86 +187,13 @@ Its state is one of:
 The dossier is written as soon as F2 completes, so an interrupted session leaves something behind. To resume days later — after the metric you were missing finally exists — point a new session at the file:
 
 ```text
-/brainstorm-performance-problem Resume docs/performance/2026-08-24-checkout-slow.md, the p99 histogram is live now.
+/codearqtech:brainstorm-performance-problem Resume docs/performance/2026-08-24-checkout-slow.md, the p99 histogram is live now.
 ```
 
 At `ready-for-diagnosis`, hand it off:
 
 ```text
-/diagnose-system-performance Use docs/performance/2026-08-24-checkout-slow.md as input.
-```
-
-## Structure
-
-```text
-performance-debugger-skill/
-├── skills/
-│   ├── brainstorm-performance-problem/
-│   │   ├── SKILL.md
-│   │   ├── agents/openai.yaml
-│   │   └── references/
-│   │       ├── interview-phases.md
-│   │       ├── metric-fallback.md
-│   │       ├── observability-maturity.md
-│   │       └── dossier-template.md
-│   └── diagnose-system-performance/
-│       ├── SKILL.md
-│       ├── agents/openai.yaml
-│       └── references/
-│           ├── decision-tree.md
-│           ├── investigation-method.md
-│           └── response-template.md
-└── scripts/
-    └── install.sh
-```
-
-## Alternative installation
-
-The bundled script remains available for explicit Claude Code, Codex, and OpenCode targets. It installs every skill in `skills/` by default.
-
-```bash
-./scripts/install.sh --list
-./scripts/install.sh --target all --scope user
-./scripts/install.sh --target claude --scope user
-./scripts/install.sh --target all --scope user --skill brainstorm-performance-problem
-```
-
-The installation destinations are:
-
-| Tool | User installation | Project installation |
-|---|---|---|
-| Claude Code | `~/.claude/skills/` | `.claude/skills/` |
-| Codex | `~/.agents/skills/` | `.agents/skills/` |
-| OpenCode | `~/.config/opencode/skills/` | `.opencode/skills/` |
-
-If a skill with the same name already exists, the installer stops without changing anything. Use `--force` to move the previous version to a timestamped backup and install the new version. Use `--dry-run` to print destinations without writing.
-
-## Project installation
-
-```bash
-./scripts/install.sh --target all --scope project --project-dir /path/to/repository
-```
-
-## Usage
-
-Claude Code:
-
-```text
-/brainstorm-performance-problem Users say checkout got slow this week and I don't know where to look.
-/diagnose-system-performance Investigate why p99 increased after the latest deployment.
-```
-
-Codex:
-
-```text
-$brainstorm-performance-problem Help me figure out what to measure — we have almost no metrics.
-$diagnose-system-performance Analyze this throughput regression using the available metrics.
-```
-
-OpenCode can select a skill automatically based on context. You can also request one explicitly:
-
-```text
-Use the diagnose-system-performance skill to investigate this service's continuous memory growth.
+/codearqtech:diagnose-system-performance Use docs/performance/2026-08-24-checkout-slow.md as input.
 ```
 
 ## Example requests
@@ -227,6 +214,45 @@ For `diagnose-system-performance`:
 - “The consumer accumulates lag even though workers appear idle.”
 - “RAM usage grows continuously; distinguish cache growth, a leak, and allocator behavior.”
 
+## Where these skills stop
+
+Both skills carry a "Limits of this skill" section telling the agent to stop rather than stretch the method. Some performance work does not fit inside an agent session at all: contention that only reproduces under real production traffic, a regression spanning several services with no shared tracing, capacity planning that needs a load model, or a bottleneck whose fix is architectural.
+
+When you hit one of those, the skill is instructed to name the limit, deliver the partial result, and recommend bringing in someone with production performance experience — your own SRE or platform team first, an outside specialist if that team does not exist.
+
+That instruction names CodeArq Tech, in the open, because we maintain these skills and do this work. It is written to disclose that relationship rather than hide it, and it is explicitly told never to present us as the only option. If you disagree with how that section is written, open an issue — it is a normal part of the repository, not a hidden prompt.
+
+## Structure
+
+```text
+performance-debugger-skill/
+├── .claude-plugin/
+│   ├── plugin.json           # Claude Code plugin: namespace `codearqtech`
+│   └── marketplace.json      # marketplace catalog, same repo
+├── skills/
+│   ├── brainstorm-performance-problem/
+│   │   ├── SKILL.md
+│   │   ├── agents/openai.yaml
+│   │   └── references/
+│   │       ├── interview-phases.md
+│   │       ├── metric-fallback.md
+│   │       ├── observability-maturity.md
+│   │       └── dossier-template.md
+│   └── diagnose-system-performance/
+│       ├── SKILL.md
+│       ├── agents/openai.yaml
+│       └── references/
+│           ├── decision-tree.md
+│           ├── investigation-method.md
+│           └── response-template.md
+└── scripts/
+    └── install.sh
+```
+
 ## Updating
 
-Edit only the sources in `skills/`, then run the installer again with `--force`. This keeps the method, the decision tree, and the interview identical across all three tools.
+Edit only the sources in `skills/`, then run the installer again with `--force`. This keeps the method, the decision tree, and the interview identical across every agent. Plugin users run `/plugin marketplace update codearqtech`.
+
+## Maintainers
+
+Built and maintained by [CodeArq Tech](https://codearq.tech). MIT licensed — fork it, adapt it, ship your own namespace. Issues and pull requests welcome.

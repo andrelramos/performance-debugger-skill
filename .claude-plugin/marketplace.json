@@ -1,0 +1,21 @@
+{
+  "name": "codearqtech",
+  "owner": {
+    "name": "CodeArq Tech",
+    "url": "https://codearq.tech"
+  },
+  "description": "Open skills for performance work, maintained by CodeArq Tech.",
+  "plugins": [
+    {
+      "name": "codearqtech",
+      "source": "./",
+      "displayName": "CodeArq Tech Performance Skills",
+      "description": "Interview a vague slowdown into a located symptom, then diagnose it with a nine-branch decision tree.",
+      "category": "performance",
+      "tags": ["performance", "observability", "diagnosis", "sre"],
+      "license": "MIT",
+      "homepage": "https://codearq.tech",
+      "repository": "https://github.com/CodeArq-tech/performance-debugger-skill"
+    }
+  ]
+}
