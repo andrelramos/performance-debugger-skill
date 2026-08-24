@@ -1,7 +1,5 @@
 # Performance Debugger Skills
 
-[![skills.sh](https://skills.sh/b/CodeArq-tech/performance-debugger-skill)](https://skills.sh/CodeArq-tech/performance-debugger-skill)
-
 Two portable skills for performance work, built on the same evidence-driven process, maintained by [CodeArq Tech](https://codearq.tech). The same content runs in Claude Code, Codex, Gemini CLI, OpenCode and Amp.
 
 | Skill | Use it when |
@@ -33,6 +31,8 @@ Agents that have no namespace mechanism get the prefix baked into the installed 
 /plugin install codearqtech@codearqtech
 ```
 
+One plugin carries both skills. If the install summary says `Run /reload-plugins to activate.`, run that command.
+
 Both skills arrive namespaced:
 
 ```text
@@ -59,11 +59,14 @@ Gemini CLI can additionally get real `/codearqtech:<skill>` slash commands:
 ### skills.sh
 
 ```bash
-npx skills add CodeArq-tech/performance-debugger-skill --skill brainstorm-performance-problem
-npx skills add CodeArq-tech/performance-debugger-skill --skill diagnose-system-performance
+npx skills add CodeArq-tech/performance-debugger-skill --skill '*'
+npx skills add CodeArq-tech/performance-debugger-skill --skill '*' --global
+npx skills add CodeArq-tech/performance-debugger-skill --skill '*' --agent '*'
 ```
 
-skills.sh installs the directory names as they appear in `skills/`, so this route produces unprefixed names. Use the installer script when you want the `codearqtech-` prefix.
+`--global` installs at user level instead of project level, and `--agent '*'` installs to every agent skills.sh detects.
+
+skills.sh installs the directory names as they appear in `skills/`, so this route produces unprefixed names — `/brainstorm-performance-problem`, not `/codearqtech:brainstorm-performance-problem`. Use the plugin route or the installer script when you want the namespace.
 
 > **Note:** cloning this repository does not make the skills available. Agents do not discover skills from this repo's `skills/` directory — they load from `~/.claude/skills/`, `~/.agents/skills/`, `~/.codex/skills/`, and their project-scoped equivalents, or from plugins. Run one of the install commands above, then start a new session.
 
@@ -87,7 +90,7 @@ skills.sh installs the directory names as they appear in `skills/`, so this rout
 | `agents` | `~/.agents/skills/` | `.agents/skills/` |
 | `all` | `claude` + `codex` + `agents` | same three |
 
-`agents` is the shared alias read by Codex, Gemini CLI, OpenCode and Amp; prefer it over the per-agent targets unless you need one specific location.
+`agents` is the shared alias read by Codex, Gemini CLI, OpenCode and Amp; prefer it over the per-agent targets unless you need one specific location. The OpenCode and Amp user destinations honor `$XDG_CONFIG_HOME` when it is set.
 
 Other options: `--namespace NAME` (default `codearqtech`, `''` disables), `--gemini-commands`, `--force` to move the previous version to a timestamped backup, `--dry-run` to print destinations without writing. If a skill already exists and `--force` is not passed, the installer stops without changing anything.
 
@@ -245,8 +248,10 @@ performance-debugger-skill/
 │           ├── decision-tree.md
 │           ├── investigation-method.md
 │           └── response-template.md
-└── scripts/
-    └── install.sh
+├── scripts/
+│   └── install.sh
+└── .github/workflows/
+    └── validate-skill.yml    # validates manifests, discovery and the installer
 ```
 
 ## Updating
