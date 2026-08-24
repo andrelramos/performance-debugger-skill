@@ -40,6 +40,15 @@ Both skills arrive namespaced:
 /codearqtech:diagnose-system-performance Investigate why p99 increased after the latest deployment.
 ```
 
+### Codex
+
+Codex installs any public GitHub skill by its full path:
+
+```text
+$skill-installer CodeArq-tech/performance-debugger-skill/brainstorm-performance-problem
+$skill-installer CodeArq-tech/performance-debugger-skill/diagnose-system-performance
+```
+
 ### Codex, Gemini CLI, OpenCode, Amp
 
 All four read the shared `.agents/skills` alias, so one install covers them:

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://skills.sh/schemas/skills.sh.schema.json",
+  "notGrouped": "bottom",
+  "groupings": [
+    {
+      "title": "Performance",
+      "description": "Evidence-driven performance work, maintained by CodeArq Tech. Start with the brainstorm skill when the problem is still a complaint; it hands off to the diagnostic skill once the symptom is located.",
+      "skills": [
+        "brainstorm-performance-problem",
+        "diagnose-system-performance"
+      ]
+    }
+  ]
+}
