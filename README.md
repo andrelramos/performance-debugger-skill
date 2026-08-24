@@ -16,6 +16,8 @@ Install globally:
 npx skills add andrelramos/performance-debugger-skill --skill diagnose-system-performance --global
 ```
 
+> **Note:** cloning or opening this repository does not make the skill available. Agents do not discover skills from this repo's `skills/` directory — Claude Code, for example, only loads skills from `~/.claude/skills/` (user), `.claude/skills/` (project), or plugins. Run one of the install commands above, then start a new session so the skill is picked up.
+
 Portable skill for investigating bottlenecks, regressions, and performance incidents with an evidence-driven process. The same content works in Claude Code, Codex, and OpenCode.
 
 ## What it does
