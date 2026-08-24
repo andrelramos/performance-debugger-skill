@@ -9,22 +9,24 @@ Two portable skills for performance work, built on the same evidence-driven proc
 
 Start with the brainstorm skill when the problem is still a complaint. It hands off to the diagnostic skill once the symptom is located.
 
-## Namespacing
-
-Every skill published here is invoked under the `codearqtech` namespace, using whatever mechanism the host agent provides:
-
-| Agent | Mechanism | Invocation |
-|---|---|---|
-| Claude Code | plugin namespace | `/codearqtech:diagnose-system-performance` |
-| Gemini CLI | namespaced slash command | `/codearqtech:diagnose-system-performance` |
-| Codex | name prefix | `$codearqtech-diagnose-system-performance` |
-| OpenCode, Amp | name prefix | `codearqtech-diagnose-system-performance` |
-
-Agents that have no namespace mechanism get the prefix baked into the installed skill name, and the installer rewrites the cross-references between the two skills so the handoff still resolves. Pass `--namespace ''` to install them unprefixed.
-
 ## Install
 
-### Claude Code (plugin — namespaced)
+Every route below installs the same two skills. They differ in which agents they reach and in what you type afterwards, because only some agents have a namespace mechanism.
+
+| Route | Agents reached | Invocation |
+|---|---|---|
+| [Claude Code plugin](#claude-code--plugin) | Claude Code | `/codearqtech:diagnose-system-performance` |
+| [Installer, `--target gemini --gemini-commands`](#installer-script--namespaced-names) | Gemini CLI | `/codearqtech:diagnose-system-performance` |
+| [Installer, any other target](#installer-script--namespaced-names) | the target you pick | `codearqtech-diagnose-system-performance` |
+| [skills.sh](#skillssh--every-agent-at-once) | every agent it detects, at once | `diagnose-system-performance` |
+| [Codex `$skill-installer`](#codex--skill-installer) | Codex | `$diagnose-system-performance` |
+| [Manual copy](#manual) | any | whatever you name the directory |
+
+A colon namespace is not something an installer can choose. `/codearqtech:<skill>` exists only where the host agent has a namespace mechanism: the plugin system in Claude Code, and command subdirectories in Gemini CLI. Everywhere else the namespace has to live in the skill name itself, which is what the installer's `codearqtech-` prefix does. Pass `--namespace ''` to turn the prefix off.
+
+### Claude Code — plugin
+
+The only route that yields a real `/codearqtech:` namespace in Claude Code.
 
 ```text
 /plugin marketplace add CodeArq-tech/performance-debugger-skill
@@ -33,39 +35,25 @@ Agents that have no namespace mechanism get the prefix baked into the installed 
 
 One plugin carries both skills. If the install summary says `Run /reload-plugins to activate.`, run that command.
 
-Both skills arrive namespaced:
-
 ```text
 /codearqtech:brainstorm-performance-problem Checkout feels slow since last week and nobody knows why.
 /codearqtech:diagnose-system-performance Investigate why p99 increased after the latest deployment.
 ```
 
-### Codex
+Update later with `/plugin marketplace update codearqtech`.
 
-Codex installs any public GitHub skill by its full path:
+### Codex — skill-installer
+
+Codex installs any public GitHub skill by its full path, with no clone and no local script:
 
 ```text
 $skill-installer CodeArq-tech/performance-debugger-skill/brainstorm-performance-problem
 $skill-installer CodeArq-tech/performance-debugger-skill/diagnose-system-performance
 ```
 
-### Codex, Gemini CLI, OpenCode, Amp
+### skills.sh — every agent at once
 
-All four read the shared `.agents/skills` alias, so one install covers them:
-
-```bash
-git clone https://github.com/CodeArq-tech/performance-debugger-skill
-cd performance-debugger-skill
-./scripts/install.sh --target agents --scope user
-```
-
-Gemini CLI can additionally get real `/codearqtech:<skill>` slash commands:
-
-```bash
-./scripts/install.sh --target gemini --scope user --gemini-commands
-```
-
-### skills.sh
+The broadest route. It detects the agents you have installed and writes to all of them in one pass.
 
 ```bash
 npx skills add CodeArq-tech/performance-debugger-skill --skill '*'
@@ -73,9 +61,56 @@ npx skills add CodeArq-tech/performance-debugger-skill --skill '*' --global
 npx skills add CodeArq-tech/performance-debugger-skill --skill '*' --agent '*'
 ```
 
-`--global` installs at user level instead of project level, and `--agent '*'` installs to every agent skills.sh detects.
+- `--global` installs at user level instead of project level.
+- `--agent '*'` installs to every agent it detects.
+- `--copy` copies the files instead of symlinking them. The default is a symlink into each agent directory, so removing the skill later must go through `npx skills remove <skill> --global`; deleting a directory by hand leaves dangling links behind.
 
-skills.sh installs the directory names as they appear in `skills/`, so this route produces unprefixed names — `/brainstorm-performance-problem`, not `/codearqtech:brainstorm-performance-problem`. Use the plugin route or the installer script when you want the namespace.
+This route installs the directory names as they appear in `skills/`, so it produces unprefixed names — `/brainstorm-performance-problem`, not `/codearqtech:brainstorm-performance-problem`. Use the plugin route or the installer script when you want the namespace.
+
+### Installer script — namespaced names
+
+Clone once, then pick a target. This is the route that applies the `codearqtech-` prefix and rewrites the cross-references between the two skills so the handoff still resolves.
+
+```bash
+git clone https://github.com/CodeArq-tech/performance-debugger-skill
+cd performance-debugger-skill
+```
+
+Codex, Gemini CLI, OpenCode and Amp all read the shared `.agents/skills` alias, so one target covers the four:
+
+```bash
+./scripts/install.sh --target agents --scope user
+```
+
+Claude Code, as plain skills rather than a plugin — useful when you do not want a plugin installed:
+
+```bash
+./scripts/install.sh --target claude --scope user
+```
+
+That yields `/codearqtech-brainstorm-performance-problem`, with a hyphen. Only the plugin route gives the colon.
+
+Gemini CLI can additionally get real `/codearqtech:<skill>` slash commands, generated as namespaced TOML command files:
+
+```bash
+./scripts/install.sh --target gemini --scope user --gemini-commands
+```
+
+Install into a single repository instead of your user directory:
+
+```bash
+./scripts/install.sh --target agents --scope project --project-dir /path/to/repository
+```
+
+### Manual
+
+The skills are plain directories with no build step and no dependencies. Copy the one you want into any location your agent reads:
+
+```bash
+cp -R skills/diagnose-system-performance ~/.agents/skills/
+```
+
+The directory name is the skill name, so rename it if you want a prefix. If you rename it, also update the `name` field in its `SKILL.md` frontmatter, and, for `brainstorm-performance-problem`, the `../diagnose-system-performance/references/decision-tree.md` path it uses to reach the decision tree. The installer script does both rewrites for you.
 
 > **Note:** cloning this repository does not make the skills available. Agents do not discover skills from this repo's `skills/` directory — they load from `~/.claude/skills/`, `~/.agents/skills/`, `~/.codex/skills/`, and their project-scoped equivalents, or from plugins. Run one of the install commands above, then start a new session.
 
