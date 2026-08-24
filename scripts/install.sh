@@ -3,12 +3,12 @@ set -eu
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 PROJECT_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
-SKILL_NAME="diagnose-system-performance"
-SOURCE_DIR="$PROJECT_ROOT/skills/$SKILL_NAME"
+SKILLS_ROOT="$PROJECT_ROOT/skills"
 
 TARGET="all"
 SCOPE="user"
 PROJECT_DIR=""
+SKILL_FILTER=""
 FORCE="false"
 DRY_RUN="false"
 
@@ -17,10 +17,21 @@ usage() {
   printf '%s\n' "  --target claude|codex|opencode|all   Target (default: all)"
   printf '%s\n' "  --scope user|project                 Scope (default: user)"
   printf '%s\n' "  --project-dir PATH                   Required for project scope"
+  printf '%s\n' "  --skill NAME                         Install one skill (default: all skills)"
+  printf '%s\n' "  --list                               List available skills and exit"
   printf '%s\n' "  --force                              Back up and replace the existing version"
   printf '%s\n' "  --dry-run                            Show destinations without writing"
   printf '%s\n' "  --help                               Show this help"
 }
+
+available_skills() {
+  for candidate in "$SKILLS_ROOT"/*; do
+    [ -f "$candidate/SKILL.md" ] || continue
+    basename "$candidate"
+  done
+}
+
+LIST_ONLY="false"
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -38,6 +49,15 @@ while [ "$#" -gt 0 ]; do
       [ "$#" -ge 2 ] || { printf '%s\n' "Missing value for --project-dir" >&2; exit 2; }
       PROJECT_DIR="$2"
       shift 2
+      ;;
+    --skill)
+      [ "$#" -ge 2 ] || { printf '%s\n' "Missing value for --skill" >&2; exit 2; }
+      SKILL_FILTER="$2"
+      shift 2
+      ;;
+    --list)
+      LIST_ONLY="true"
+      shift
       ;;
     --force)
       FORCE="true"
@@ -59,6 +79,22 @@ while [ "$#" -gt 0 ]; do
   esac
 done
 
+[ -d "$SKILLS_ROOT" ] || {
+  printf '%s\n' "Skills directory not found: $SKILLS_ROOT" >&2
+  exit 1
+}
+
+SKILLS=$(available_skills)
+[ -n "$SKILLS" ] || {
+  printf '%s\n' "No skill with a SKILL.md found in: $SKILLS_ROOT" >&2
+  exit 1
+}
+
+if [ "$LIST_ONLY" = "true" ]; then
+  printf '%s\n' "$SKILLS"
+  exit 0
+fi
+
 case "$TARGET" in
   claude|codex|opencode|all) ;;
   *) printf '%s\n' "Invalid target: $TARGET" >&2; exit 2 ;;
@@ -69,10 +105,15 @@ case "$SCOPE" in
   *) printf '%s\n' "Invalid scope: $SCOPE" >&2; exit 2 ;;
 esac
 
-[ -f "$SOURCE_DIR/SKILL.md" ] || {
-  printf '%s\n' "Skill source not found: $SOURCE_DIR" >&2
-  exit 1
-}
+if [ -n "$SKILL_FILTER" ]; then
+  [ -f "$SKILLS_ROOT/$SKILL_FILTER/SKILL.md" ] || {
+    printf '%s\n' "Unknown skill: $SKILL_FILTER" >&2
+    printf '%s\n' "Available:" >&2
+    printf '%s\n' "$SKILLS" >&2
+    exit 2
+  }
+  SKILLS="$SKILL_FILTER"
+fi
 
 if [ "$SCOPE" = "project" ]; then
   [ -n "$PROJECT_DIR" ] || {
@@ -84,6 +125,12 @@ if [ "$SCOPE" = "project" ]; then
     exit 2
   }
   PROJECT_DIR=$(CDPATH= cd -- "$PROJECT_DIR" && pwd)
+fi
+
+if [ "$TARGET" = "all" ]; then
+  PLATFORMS="claude codex opencode"
+else
+  PLATFORMS="$TARGET"
 fi
 
 destination_base() {
@@ -105,8 +152,9 @@ destination_base() {
 
 preflight_for() {
   platform="$1"
+  skill="$2"
   base=$(destination_base "$platform")
-  destination="$base/$SKILL_NAME"
+  destination="$base/$skill"
   if { [ -e "$destination" ] || [ -L "$destination" ]; } && [ "$FORCE" != "true" ]; then
     printf '%s\n' "[$platform] Already exists: $destination" >&2
     printf '%s\n' "No destinations were changed. Use --force to create a backup and update." >&2
@@ -116,11 +164,13 @@ preflight_for() {
 
 install_for() {
   platform="$1"
+  skill="$2"
   base=$(destination_base "$platform")
-  destination="$base/$SKILL_NAME"
+  source_dir="$SKILLS_ROOT/$skill"
+  destination="$base/$skill"
 
   if [ "$DRY_RUN" = "true" ]; then
-    printf '%s\n' "[$platform] $SOURCE_DIR -> $destination"
+    printf '%s\n' "[$platform] $source_dir -> $destination"
     return
   fi
 
@@ -142,24 +192,20 @@ install_for() {
     printf '%s\n' "[$platform] Backup created: $backup"
   fi
 
-  cp -R "$SOURCE_DIR" "$destination"
+  cp -R "$source_dir" "$destination"
   printf '%s\n' "[$platform] Installed: $destination"
 }
 
 if [ "$DRY_RUN" != "true" ]; then
-  if [ "$TARGET" = "all" ]; then
-    preflight_for claude
-    preflight_for codex
-    preflight_for opencode
-  else
-    preflight_for "$TARGET"
-  fi
+  for platform in $PLATFORMS; do
+    for skill in $SKILLS; do
+      preflight_for "$platform" "$skill"
+    done
+  done
 fi
 
-if [ "$TARGET" = "all" ]; then
-  install_for claude
-  install_for codex
-  install_for opencode
-else
-  install_for "$TARGET"
-fi
+for platform in $PLATFORMS; do
+  for skill in $SKILLS; do
+    install_for "$platform" "$skill"
+  done
+done
